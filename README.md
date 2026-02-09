@@ -1,34 +1,99 @@
-# ESP8266 React
+# Weighsoft Hardware UI
 
-[![Build Status](https://travis-ci.org/rjwats/esp8266-react.svg?branch=master)](https://travis-ci.org/rjwats/esp8266-react)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
+[![Platform](https://img.shields.io/badge/platform-ESP8266%20%7C%20ESP32-lightgrey.svg)](https://platformio.org/)
+[![Framework](https://img.shields.io/badge/framework-Arduino-00979D.svg)](https://www.arduino.cc/)
+[![React](https://img.shields.io/badge/react-18.1.0-61DAFB.svg?logo=react)](https://reactjs.org/)
+[![Material UI](https://img.shields.io/badge/Material--UI-5.8.0-0081CB.svg?logo=material-ui)](https://mui.com/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-A simple, secure and extensible framework for IoT projects built on ESP8266/ESP32 platforms with responsive [React](https://reactjs.org/) front-end built with [Material-UI](https://mui.com/).
+A professional hardware interface framework for weighbridge and IoT projects built on ESP8266/ESP32 platforms with responsive React front-end and Material-UI. Designed for Weighsoft solutions requiring reliable, secure, and scalable hardware control.
 
 Designed to work with the PlatformIO IDE with [limited setup](#getting-started). Please read below for setup, build and upload instructions.
 
-![Screenshots](/media/screenshots.png?raw=true "Screenshots")
+## Table of Contents
+
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Quick Start](#quick-start)
+  - [Building the Firmware](#building-the-firmware)
+  - [Uploading the Firmware](#uploading-the-firmware)
+- [Configuration](#configuration)
+  - [Selecting Features](#selecting-features)
+  - [Factory Settings](#factory-settings)
+- [Customization](#customizing-and-theming)
+- [Architecture](#back-end)
+- [Security Features](#security-features)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Screenshots
+
+| Dashboard | WiFi Configuration | Security Settings |
+|-----------|-------------------|-------------------|
+| ![Dashboard](/media/screenshots.png?raw=true) | ![WiFi](/media/screenshots.png?raw=true) | ![Security](/media/screenshots.png?raw=true) |
+
+*Weighsoft Hardware UI with professional branding and intuitive controls*
 
 ## Features
 
-Provides many of the features required for IoT projects:
+### Core Capabilities
+- 🔒 **Security First** - JWT authentication, protected endpoints, role-based access
+- 📡 **Network Management** - WiFi scanner, configurable Access Point with auto-failover
+- ⏰ **Time Synchronization** - NTP integration for accurate timestamps
+- 📨 **MQTT Integration** - Full MQTT broker support for automation and monitoring
+- 🔄 **OTA Updates** - Remote firmware updates via network or web UI
+- ⚙️ **Modular Design** - Enable/disable features at compile-time
+- 🎨 **Light & Dark Mode** - Theme preferences saved per user on ESP device
 
-* Configurable WiFi - Network scanner and WiFi configuration screen
-* Configurable Access Point - Can be continuous or automatically enabled when WiFi connection fails
-* Network Time - Synchronization with NTP
-* MQTT - Connection to an MQTT broker for automation and monitoring
-* Remote Firmware Updates - Firmware replacement using OTA update or upload via UI
-* Security - Protected RESTful endpoints and a secured user interface
+### Technical Highlights
+- ⚡ Responsive React UI with Material-UI components
+- 🎨 Weighsoft branding with professional color scheme (Curious Blue & Bunting)
+- 💾 Persistent configuration storage
+- 🔌 RESTful API with WebSocket support
+- 📊 Real-time status monitoring
+- 🛡️ CORS support for cross-origin requests
 
-Features may be [enabled or disabled](#selecting-features) as required at compile time.
+All features are [configurable at compile-time](#selecting-features) to optimize binary size.
 
 ## Getting Started
 
 ### Prerequisites
 
-You will need the following before you can get started.
+**Required:**
+- [PlatformIO](https://platformio.org/) >= 6.0 - Development platform
+- [Node.js](https://nodejs.org) >= 14.x - For building the React interface
+- [Python](https://python.org) >= 3.7 - For PlatformIO and build scripts
 
-* [PlatformIO](https://platformio.org/) - IDE for development
-* [Node.js](https://nodejs.org) - For building the interface with npm
+**Hardware:**
+- ESP8266 (min 4MB flash) or ESP32 module
+- USB-to-serial adapter (for initial programming)
+
+**Optional:**
+- [Git](https://git-scm.com/) - Version control
+- [VS Code](https://code.visualstudio.com/) - Recommended IDE with PlatformIO extension
+
+### Quick Start
+
+```bash
+# Clone repository
+git clone https://github.com/your-org/weighsoft-hardware-ui.git
+cd weighsoft-hardware-ui
+
+# Install PlatformIO (if not installed)
+pip install platformio
+
+# Build and upload firmware
+pio run -t upload
+
+# Build and upload filesystem (if using filesystem serving)
+pio run -t uploadfs
+```
+
+For detailed instructions, see the sections below.
 
 ### Building and uploading the firmware
 
@@ -189,8 +254,10 @@ Customize the settings as you see fit, for example you might configure your home
 
 By default, the factory settings configure the device to bring up an access point on start up which can be used to configure the device:
 
-* SSID: ESP8266-React
+* SSID: Weighsoft-HW
 * Password: esp-react
+
+**Note:** The actual AP SSID is configured in [factory_settings.ini](factory_settings.ini)
 
 ### Security settings and user credentials
 
@@ -337,9 +404,15 @@ There is also a manifest file which contains the app name to use when adding the
 
 ## Back end
 
-The back end is a set of REST endpoints hosted by a [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer) instance. The ['lib/framework'](lib/framework) directory contains the majority of the back end code. The framework contains of a number of useful utility classes which you can use when extending it. The project also comes with a demo project to give you some help getting started. 
+The back end is a set of REST endpoints hosted by a [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer) instance. The ['lib/framework'](lib/framework) directory contains the majority of the back end code. The framework contains of a number of useful utility classes which you can use when extending it. The project also comes with a demo project to give you some help getting started.
 
 The framework's source is split up by feature, for example [WiFiScanner.h](lib/framework/WiFiScanner.h) implements the end points for scanning for available networks where as [WiFiSettingsService.h](lib/framework/WiFiSettingsService.h) handles configuring the WiFi settings and managing the WiFi connection.
+
+For detailed architecture documentation, see:
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [C4 Diagrams](docs/C4-CONTEXT.md)
+- [Design Patterns](docs/DESIGN-PATTERNS.md)
+- [API Reference](docs/API-REFERENCE.md)
 
 ### Initializing the framework
 
@@ -657,6 +730,56 @@ esp8266React.getWiFiSettingsService()->addUpdateHandler(
   }
 );
 ```
+
+## Troubleshooting
+
+### Common Issues
+
+**Build Errors:**
+- Ensure PlatformIO is up to date: `pio upgrade`
+- Clean build: `pio run -t clean`
+- Check [platformio.ini](platformio.ini) for correct board configuration
+
+**Upload Errors:**
+- Verify USB connection and correct port in PlatformIO
+- Hold BOOT button on ESP8266 during upload
+- Check power supply (min 500mA)
+
+**WiFi Connection Issues:**
+- Reset to factory defaults via serial: `factory reset`
+- Check WiFi credentials in [factory_settings.ini](factory_settings.ini)
+- Verify 2.4GHz network (5GHz not supported)
+
+For more help, see [documentation](docs/) or [open an issue](https://github.com/your-org/weighsoft-hardware-ui/issues).
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes following [Cursor rules](.cursor/rules/)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Standards
+
+- Follow [design patterns](.cursor/rules/design-patterns.mdc)
+- Use [automated formatters](.cursor/rules/code-formatting.mdc)
+- Ensure ESP8266 and ESP32 compatibility
+- Add tests for new features
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
+
+## Acknowledgments
+
+- Built on [ESP8266 React](https://github.com/rjwats/esp8266-react) framework
+- React and Material-UI communities
+- PlatformIO and Arduino frameworks
 
 ## Libraries Used
 

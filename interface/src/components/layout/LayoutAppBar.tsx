@@ -7,6 +7,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { FeaturesContext } from '../../contexts/features';
 
 import LayoutAuthMenu from './LayoutAuthMenu';
+import { ThemeToggle } from '../';
 
 export const DRAWER_WIDTH = 280;
 
@@ -41,6 +42,7 @@ const LayoutAppBar: FC<LayoutAppBarProps> = ({ title, onToggleDrawer }) => {
           {title}
         </Typography>
         <Box flexGrow={1} />
+        <ThemeToggle />
         {features.security && <LayoutAuthMenu />}
       </Toolbar>
     </AppBar>

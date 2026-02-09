@@ -24,6 +24,7 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
 #endif
 #if FT_ENABLED(FT_SECURITY)
     _authenticationService(server, &_securitySettingsService),
+    _userThemeService(server, &_securitySettingsService, &_securitySettingsService),
 #endif
     _restartService(server, &_securitySettingsService),
     _factoryResetService(server, &ESPFS, &_securitySettingsService),

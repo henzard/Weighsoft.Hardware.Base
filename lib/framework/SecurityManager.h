@@ -20,9 +20,11 @@ class User {
   String username;
   String password;
   bool admin;
+  String themePreference;
 
  public:
-  User(String username, String password, bool admin) : username(username), password(password), admin(admin) {
+  User(String username, String password, bool admin, String themePreference = "light")
+      : username(username), password(password), admin(admin), themePreference(themePreference) {
   }
 };
 

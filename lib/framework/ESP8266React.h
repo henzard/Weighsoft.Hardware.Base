@@ -11,7 +11,6 @@
 #include <ESPAsyncTCP.h>
 #endif
 
-#include <FeaturesService.h>
 #include <APSettingsService.h>
 #include <APStatus.h>
 #include <AuthenticationService.h>
@@ -25,6 +24,7 @@
 #include <RestartService.h>
 #include <SecuritySettingsService.h>
 #include <SystemStatus.h>
+#include <UserThemeService.h>
 #include <WiFiScanner.h>
 #include <WiFiSettingsService.h>
 #include <WiFiStatus.h>
@@ -117,6 +117,7 @@ class ESP8266React {
 #endif
 #if FT_ENABLED(FT_SECURITY)
   AuthenticationService _authenticationService;
+  UserThemeService _userThemeService;
 #endif
   RestartService _restartService;
   FactoryResetService _factoryResetService;

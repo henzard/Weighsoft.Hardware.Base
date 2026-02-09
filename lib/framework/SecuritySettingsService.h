@@ -48,6 +48,7 @@ class SecuritySettings {
       userRoot["username"] = user.username;
       userRoot["password"] = user.password;
       userRoot["admin"] = user.admin;
+      userRoot["theme_preference"] = user.themePreference;
     }
   }
 
@@ -59,11 +60,11 @@ class SecuritySettings {
     settings.users.clear();
     if (root["users"].is<JsonArray>()) {
       for (JsonVariant user : root["users"].as<JsonArray>()) {
-        settings.users.push_back(User(user["username"], user["password"], user["admin"]));
+        settings.users.push_back(User(user["username"], user["password"], user["admin"], user["theme_preference"] | "light"));
       }
     } else {
-      settings.users.push_back(User(FACTORY_ADMIN_USERNAME, FACTORY_ADMIN_PASSWORD, true));
-      settings.users.push_back(User(FACTORY_GUEST_USERNAME, FACTORY_GUEST_PASSWORD, false));
+      settings.users.push_back(User(FACTORY_ADMIN_USERNAME, FACTORY_ADMIN_PASSWORD, true, "light"));
+      settings.users.push_back(User(FACTORY_GUEST_USERNAME, FACTORY_GUEST_PASSWORD, false, "light"));
     }
     return StateUpdateResult::CHANGED;
   }

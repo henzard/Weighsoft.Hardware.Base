@@ -5,6 +5,7 @@ import { IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
 import { FeaturesLoader } from './contexts/features';
+import { ThemeProvider } from './contexts/theme';
 
 import CustomTheme from './CustomTheme';
 import AppRouting from './AppRouting';
@@ -17,22 +18,24 @@ const App: FC = () => {
   };
 
   return (
-    <CustomTheme>
-      <SnackbarProvider
-        maxSnack={3}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        ref={notistackRef}
-        action={(key) => (
-          <IconButton onClick={onClickDismiss(key)} size="small">
-            <CloseIcon />
-          </IconButton>
-        )}
-      >
-        <FeaturesLoader>
-          <AppRouting />
-        </FeaturesLoader>
-      </SnackbarProvider>
-    </CustomTheme>
+    <ThemeProvider>
+      <CustomTheme>
+        <SnackbarProvider
+          maxSnack={3}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          ref={notistackRef}
+          action={(key) => (
+            <IconButton onClick={onClickDismiss(key)} size="small">
+              <CloseIcon />
+            </IconButton>
+          )}
+        >
+          <FeaturesLoader>
+            <AppRouting />
+          </FeaturesLoader>
+        </SnackbarProvider>
+      </CustomTheme>
+    </ThemeProvider>
   );
 };
 
