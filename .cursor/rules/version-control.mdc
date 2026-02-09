@@ -19,12 +19,14 @@ Any changes to source code files:
 
 ### 1. Commit Code Changes
 
-After making code changes, always commit:
+After making code changes, always commit with co-author attribution:
 
 ```bash
 git add .
-git commit -m "type: description"
+git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -m "type: description"
 ```
+
+**Partnership Principle:** This is a joint effort. Include the co-author trailer to properly credit the collaborative nature of the work.
 
 ### 2. Commit Message Format
 
@@ -34,6 +36,11 @@ Use conventional commit format:
 - `refactor: improve StatefulService thread safety`
 - `docs: update API reference for new endpoint`
 - `test: add unit tests for LightStateService`
+
+For multi-line messages, use a file:
+```bash
+git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -F commit_msg.txt
+```
 
 ### 3. Push Changes
 
