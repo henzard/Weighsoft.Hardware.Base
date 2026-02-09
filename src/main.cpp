@@ -39,10 +39,25 @@ void setup() {
       esp8266React->getSecurityManager(),
       esp8266React->getMqttClient()
 #if FT_ENABLED(FT_BLE)
-      ,esp8266React->getBleServer()
+      ,nullptr  // BLE server will be configured via callback
 #endif
       );
   Serial.println(F("[4/6] LED example service created OK"));
+
+#if FT_ENABLED(FT_BLE)
+  // Register callback to configure BLE when server is ready
+  esp8266React->getBleSettingsService()->onBleServerStarted(
+    [](BLEServer* bleServer) {
+      Serial.println(F("[LED] BLE server ready callback received"));
+      if (ledExampleService) {
+        // Update the service's BLE server pointer
+        ledExampleService->setBleServer(bleServer);
+        ledExampleService->configureBle();
+      }
+    }
+  );
+  Serial.println(F("[4/6] BLE callback registered OK"));
+#endif
 
   // load the initial LED settings
   ledExampleService->begin();

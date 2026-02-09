@@ -43,12 +43,8 @@ LedExampleService::LedExampleService(AsyncWebServer* server,
   // configure MQTT callback
   _mqttClient->onConnect(std::bind(&LedExampleService::configureMqtt, this));
 
-#if FT_ENABLED(FT_BLE)
-  // configure BLE service and characteristic
-  if (_bleServer != nullptr) {
-    configureBle();
-  }
-#endif
+  // Note: BLE will be configured via callback when BLE server is ready
+  // This prevents initialization order issues
 
   // configure update handler to update LED state for ALL channels
   // Origin tracking prevents feedback loops automatically
@@ -94,6 +90,11 @@ void LedExampleService::configureMqtt() {
 
 #if FT_ENABLED(FT_BLE)
 void LedExampleService::configureBle() {
+  if (_bleServer == nullptr) {
+    Serial.println("[LED] BLE server not available, skipping BLE configuration");
+    return;
+  }
+  
   Serial.println("[LED] Configuring BLE service...");
   
   // Create BLE service with inline UUID

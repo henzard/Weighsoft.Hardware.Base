@@ -15,7 +15,8 @@ BleSettingsService::BleSettingsService(AsyncWebServer* server,
                   securityManager,
                   AuthenticationPredicates::IS_AUTHENTICATED),
     _fsPersistence(BleSettings::read, BleSettings::update, this, fs, BLE_SETTINGS_FILE),
-    _bleServer(nullptr) {
+    _bleServer(nullptr),
+    _onServerStartedCallback(nullptr) {
   addUpdateHandler([&](const String& originId) { onConfigUpdated(); }, false);
 }
 
@@ -41,7 +42,15 @@ void BleSettingsService::startBleServer() {
   BLEDevice::init(_state.deviceName.c_str());
   _bleServer = BLEDevice::createServer();
 
-  // Start advertising
+  Serial.printf("[BLE] BLE server started: %s\n", _state.deviceName.c_str());
+
+  // Notify registered services that BLE server is ready
+  if (_onServerStartedCallback) {
+    Serial.println("[BLE] Notifying services...");
+    _onServerStartedCallback(_bleServer);
+  }
+
+  // Start advertising AFTER services are added
   BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(BLEUUID((uint16_t)0x1800));  // Generic Access
   pAdvertising->setScanResponse(true);
@@ -49,7 +58,7 @@ void BleSettingsService::startBleServer() {
   pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
 
-  Serial.printf("[BLE] BLE server started: %s\n", _state.deviceName.c_str());
+  Serial.println("[BLE] BLE advertising started");
 }
 
 void BleSettingsService::stopBleServer() {

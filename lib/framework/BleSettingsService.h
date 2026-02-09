@@ -5,6 +5,7 @@
 
 #if FT_ENABLED(FT_BLE)
 
+#include <functional>
 #include <HttpEndpoint.h>
 #include <FSPersistence.h>
 #include <SettingValue.h>
@@ -51,10 +52,17 @@ class BleSettingsService : public StatefulService<BleSettings> {
   BLEServer* getBleServer() { return _bleServer; }
   bool isEnabled() { return _state.enabled; }
 
+  // Callback for when BLE server is started/stopped
+  using BleServerCallback = std::function<void(BLEServer*)>;
+  void onBleServerStarted(BleServerCallback callback) {
+    _onServerStartedCallback = callback;
+  }
+
  private:
   HttpEndpoint<BleSettings> _httpEndpoint;
   FSPersistence<BleSettings> _fsPersistence;
   BLEServer* _bleServer;
+  BleServerCallback _onServerStartedCallback;
 
   void onConfigUpdated();
   void startBleServer();

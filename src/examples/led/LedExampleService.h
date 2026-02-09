@@ -82,6 +82,11 @@ class LedExampleService : public StatefulService<LedExampleState> {
                     );
   void begin();
 
+#if FT_ENABLED(FT_BLE)
+  void setBleServer(BLEServer* bleServer) { _bleServer = bleServer; }
+  void configureBle();
+#endif
+
  private:
   HttpEndpoint<LedExampleState> _httpEndpoint;
   MqttPubSub<LedExampleState> _mqttPubSub;
@@ -102,8 +107,6 @@ class LedExampleService : public StatefulService<LedExampleState> {
   // Inline BLE configuration - single-layer pattern
   static constexpr const char* BLE_SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214";
   static constexpr const char* BLE_CHAR_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
-  
-  void configureBle();
 #endif
 
   void configureMqtt();
