@@ -78,18 +78,20 @@ build_flags =
   -D FT_NTP=1                # Enable NTP
   -D FT_OTA=1                # Enable OTA updates
   -D FT_UPLOAD_FIRMWARE=1    # Enable firmware upload
+  -D FT_BLE=1                # Enable BLE (ESP32 only)
 ```
 
 ### Feature Descriptions
 
 | Flag | Default | Description | Impact |
 |------|---------|-------------|--------|
-| `FT_PROJECT` | 1 | Project-specific UI | Shows/hides `/demo/` routes in UI |
+| `FT_PROJECT` | 1 | Project-specific UI | Shows/hides `/led-example/` routes in UI |
 | `FT_SECURITY` | 1 | Authentication & authorization | Removes sign-in, all endpoints public |
 | `FT_MQTT` | 1 | MQTT broker integration | Removes MQTT client and endpoints |
 | `FT_NTP` | 1 | Network time sync | Removes NTP service |
 | `FT_OTA` | 1 | OTA update support | Removes OTA service |
 | `FT_UPLOAD_FIRMWARE` | 1 | Manual firmware upload | Removes upload endpoint |
+| `FT_BLE` | 1 (ESP32 only) | Bluetooth Low Energy | Removes BLE server and GATT services |
 
 ### Conditional Compilation
 
@@ -97,6 +99,11 @@ build_flags =
 #if FT_ENABLED(FT_MQTT)
     MqttSettingsService _mqttSettingsService;
     MqttStatus _mqttStatus;
+#endif
+
+#if FT_ENABLED(FT_BLE)
+    BleSettingsService _bleSettingsService;
+    BleStatus _bleStatus;
 #endif
 
 #if FT_ENABLED(FT_SECURITY)
@@ -115,6 +122,32 @@ Disabling features saves flash and RAM:
 | FT_NTP | ~5KB | ~1KB |
 | FT_OTA | ~10KB | ~2KB |
 | FT_UPLOAD_FIRMWARE | ~8KB | ~1KB |
+| FT_BLE | ~25KB | ~8KB |
+
+### BLE Configuration (ESP32 Only)
+
+BLE is automatically disabled on ESP8266. On ESP32:
+
+```cpp
+#ifndef FT_BLE
+#ifdef ESP32
+#define FT_BLE 1  // Enabled by default on ESP32
+#else
+#define FT_BLE 0  // Always disabled on ESP8266
+#endif
+#endif
+```
+
+**Single-Layer Pattern**: Application services compose `BlePubSub<T>` directly with inline UUIDs:
+
+```cpp
+class LedExampleService : public StatefulService<LedExampleState> {
+  BlePubSub<LedExampleState> _blePubSub;
+  
+  static constexpr const char* BLE_SERVICE_UUID = "19b10000-...";
+  static constexpr const char* BLE_CHAR_UUID = "19b10001-...";
+};
+```
 
 ## Factory Settings (factory_settings.ini)
 

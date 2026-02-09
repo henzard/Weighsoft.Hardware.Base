@@ -37,7 +37,11 @@ void setup() {
   ledExampleService = new LedExampleService(
       server,
       esp8266React->getSecurityManager(),
-      esp8266React->getMqttClient());
+      esp8266React->getMqttClient()
+#if FT_ENABLED(FT_BLE)
+      ,esp8266React->getBleServer()
+#endif
+      );
   Serial.println(F("[4/6] LED example service created OK"));
 
   // load the initial LED settings

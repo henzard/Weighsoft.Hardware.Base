@@ -282,6 +282,61 @@ Get NTP synchronization status.
 }
 ```
 
+### BLE (Bluetooth Low Energy)
+
+#### GET /rest/bleSettings
+
+Get BLE configuration.
+
+**Security**: IS_AUTHENTICATED
+
+**Platform**: ESP32 only (returns 404 on ESP8266)
+
+**Response** (200 OK):
+```json
+{
+  "enabled": true,
+  "device_name": "Weighsoft-a4e57cdb7928"
+}
+```
+
+#### POST /rest/bleSettings
+
+Update BLE configuration.
+
+**Security**: IS_AUTHENTICATED
+
+**Request**: Same structure as GET response
+
+**Notes**:
+- Changing `device_name` requires BLE restart
+- Device name appears in BLE scans
+- Changes take effect immediately
+
+#### GET /rest/bleStatus
+
+Get BLE connection status.
+
+**Security**: IS_AUTHENTICATED
+
+**Platform**: ESP32 only
+
+**Response** (200 OK):
+```json
+{
+  "enabled": true,
+  "connected_devices": 1,
+  "device_name": "Weighsoft-a4e57cdb7928",
+  "mac_address": "A4:E5:7C:DB:79:28"
+}
+```
+
+**Field Descriptions**:
+- `enabled`: Whether BLE server is running
+- `connected_devices`: Number of active BLE connections
+- `device_name`: Current advertised device name
+- `mac_address`: Bluetooth MAC address
+
 ### OTA (Over-The-Air Updates)
 
 #### GET /rest/otaSettings

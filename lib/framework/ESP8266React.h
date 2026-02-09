@@ -31,6 +31,11 @@
 #include <WiFiStatus.h>
 #include <ESPFS.h>
 
+#if FT_ENABLED(FT_BLE)
+#include <BleSettingsService.h>
+#include <BleStatus.h>
+#endif
+
 #ifdef PROGMEM_WWW
 #include <WWWData.h>
 #endif
@@ -90,6 +95,16 @@ class ESP8266React {
   }
 #endif
 
+#if FT_ENABLED(FT_BLE)
+  BleSettingsService* getBleSettingsService() {
+    return &_bleSettingsService;
+  }
+
+  BLEServer* getBleServer() {
+    return _bleSettingsService.getBleServer();
+  }
+#endif
+
   void factoryReset() {
     _factoryResetService.factoryReset();
   }
@@ -115,6 +130,10 @@ class ESP8266React {
 #if FT_ENABLED(FT_MQTT)
   MqttSettingsService _mqttSettingsService;
   MqttStatus _mqttStatus;
+#endif
+#if FT_ENABLED(FT_BLE)
+  BleSettingsService _bleSettingsService;
+  BleStatus _bleStatus;
 #endif
 #if FT_ENABLED(FT_SECURITY)
   AuthenticationService _authenticationService;

@@ -2,7 +2,11 @@
 
 LedExampleService::LedExampleService(AsyncWebServer* server,
                                      SecurityManager* securityManager,
-                                     AsyncMqttClient* mqttClient) :
+                                     AsyncMqttClient* mqttClient
+#if FT_ENABLED(FT_BLE)
+                                     ,BLEServer* bleServer
+#endif
+                                     ) :
     _httpEndpoint(LedExampleState::read,
                   LedExampleState::update,
                   this,
@@ -18,7 +22,14 @@ LedExampleService::LedExampleService(AsyncWebServer* server,
                LED_EXAMPLE_SOCKET_PATH,
                securityManager,
                AuthenticationPredicates::IS_AUTHENTICATED),
-    _mqttClient(mqttClient) {
+    _mqttClient(mqttClient)
+#if FT_ENABLED(FT_BLE)
+    ,_blePubSub(LedExampleState::read, LedExampleState::update, this, bleServer),
+    _bleServer(bleServer),
+    _bleService(nullptr),
+    _bleCharacteristic(nullptr)
+#endif
+{
   
   // Inline MQTT configuration using SettingValue placeholders
   // Single-layer pattern - no separate settings service needed
@@ -31,6 +42,13 @@ LedExampleService::LedExampleService(AsyncWebServer* server,
 
   // configure MQTT callback
   _mqttClient->onConnect(std::bind(&LedExampleService::configureMqtt, this));
+
+#if FT_ENABLED(FT_BLE)
+  // configure BLE service and characteristic
+  if (_bleServer != nullptr) {
+    configureBle();
+  }
+#endif
 
   // configure update handler to update LED state for ALL channels
   // Origin tracking prevents feedback loops automatically
@@ -73,3 +91,29 @@ void LedExampleService::configureMqtt() {
   serializeJson(doc, payload);
   _mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
 }
+
+#if FT_ENABLED(FT_BLE)
+void LedExampleService::configureBle() {
+  Serial.println("[LED] Configuring BLE service...");
+  
+  // Create BLE service with inline UUID
+  _bleService = _bleServer->createService(BLE_SERVICE_UUID);
+  
+  // Create BLE characteristic with inline UUID
+  _bleCharacteristic = _bleService->createCharacteristic(
+      BLE_CHAR_UUID,
+      BLECharacteristic::PROPERTY_READ |
+      BLECharacteristic::PROPERTY_WRITE |
+      BLECharacteristic::PROPERTY_NOTIFY
+  );
+  
+  // Configure BlePubSub to use this characteristic
+  _blePubSub.configureCharacteristic(_bleCharacteristic);
+  
+  // Start the service
+  _bleService->start();
+  
+  Serial.printf("[LED] BLE service configured - Service UUID: %s, Char UUID: %s\n", 
+                BLE_SERVICE_UUID, BLE_CHAR_UUID);
+}
+#endif

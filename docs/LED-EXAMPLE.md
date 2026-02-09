@@ -200,20 +200,45 @@ LED appears automatically in Home Assistant after MQTT connects. Check:
 mosquitto_sub -h YOUR_MQTT_BROKER -t "homeassistant/light/led-12345678/config"
 ```
 
-### BLE (Phase 2)
+### BLE
+
+**Prerequisites**:
+- ESP32 device (BLE not available on ESP8266)
+- BLE enabled in web UI (**BLE > BLE Settings**)
+- Device advertising as "Weighsoft-*"
+
+**Service & Characteristic UUIDs**:
+- **Service UUID**: `19b10000-e8f2-537e-4f6c-d104768a1214`
+- **Characteristic UUID**: `19b10001-e8f2-537e-4f6c-d104768a1214`
 
 **Using nRF Connect (Mobile)**:
-1. Scan for device: "Weighsoft-LED"
-2. Connect
-3. Find service: `LED_SERVICE_UUID`
-4. Find characteristic: `LED_STATE_UUID`
-5. Write JSON: `{"led_on":true}`
-6. Enable notifications to receive updates
+1. Install nRF Connect app (iOS/Android)
+2. Scan for BLE devices
+3. Find "Weighsoft-*" device
+4. Connect to device
+5. Find LED Control service (UUID: `19b10000-e8f2-537e-4f6c-d104768a1214`)
+6. Locate LED characteristic (UUID: `19b10001-e8f2-537e-4f6c-d104768a1214`)
+7. Write JSON: `{"led_on":true}`
+8. Enable notifications to receive state updates
 
 **Using `gatttool` (Linux)**:
 ```bash
+# Scan for device
+sudo hcitool lescan
+
+# Write to characteristic (replace AA:BB:CC:DD:EE:FF with device MAC, 0x0042 with handle)
 gatttool -b AA:BB:CC:DD:EE:FF --char-write-req -a 0x0042 -n $(echo -n '{"led_on":true}' | xxd -p)
 ```
+
+**Multi-Channel Sync Test**:
+1. Open LED Example in web UI (REST tab)
+2. Connect via nRF Connect mobile app
+3. Enable notifications on LED characteristic
+4. Toggle LED from web UI REST tab → Notification arrives instantly on mobile
+5. Toggle LED from mobile app → Web UI updates immediately (if WebSocket is open)
+6. Toggle via MQTT → Both BLE and web UI sync automatically
+
+**Origin Tracking**: All channels use unique origin IDs (`BLE_ORIGIN_ID`, `MQTT_ORIGIN_ID`, etc.), preventing feedback loops automatically.
 
 ## Building Your Own Service
 
@@ -279,11 +304,13 @@ _mqttName = SettingValue::format("scale-#{unique_id}");
 _mqttUniqueId = SettingValue::format("scale-#{unique_id}");
 ```
 
-**BLE UUIDs** (Phase 2):
+**BLE UUIDs**:
 ```cpp
-_bleServiceUuid = "12345678-1234-5678-1234-56789abcdef0";
-_bleCharUuid = "12345678-1234-5678-1234-56789abcdef1";
+static constexpr const char* BLE_SERVICE_UUID = "12345678-1234-5678-1234-56789abcdef0";
+static constexpr const char* BLE_CHAR_UUID = "12345678-1234-5678-1234-56789abcdef1";
 ```
+
+**Generate UUIDs**: Use `uuidgen` (Linux/Mac) or online UUID generators. Keep UUIDs unique per service type.
 
 ### Step 5: Implement Hardware Control
 

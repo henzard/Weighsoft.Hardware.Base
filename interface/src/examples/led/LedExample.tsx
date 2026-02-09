@@ -9,6 +9,7 @@ import { RouterTabs, useRouterTab, useLayoutTitle } from '../../components';
 import LedExampleInfo from './LedExampleInfo';
 import LedControlRest from './LedControlRest';
 import LedControlWebSocket from './LedControlWebSocket';
+import LedControlBle from './LedControlBle';
 
 const LedExample: FC = () => {
   useLayoutTitle("LED Example");
@@ -20,11 +21,13 @@ const LedExample: FC = () => {
         <Tab value="information" label="Information" />
         <Tab value="rest" label="REST Control" />
         <Tab value="socket" label="WebSocket Control" />
+        <Tab value="ble" label="BLE Control" />
       </RouterTabs>
       <Routes>
         <Route path="information" element={<LedExampleInfo />} />
         <Route path="rest" element={<LedControlRest />} />
         <Route path="socket" element={<LedControlWebSocket />} />
+        <Route path="ble" element={<LedControlBle />} />
         <Route path="/*" element={<Navigate replace to="information" />} />
       </Routes>
     </>

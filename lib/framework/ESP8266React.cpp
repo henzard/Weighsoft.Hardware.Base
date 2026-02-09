@@ -22,6 +22,10 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
     _mqttSettingsService(server, &ESPFS, &_securitySettingsService),
     _mqttStatus(server, &_mqttSettingsService, &_securitySettingsService),
 #endif
+#if FT_ENABLED(FT_BLE)
+    _bleSettingsService(server, &ESPFS, &_securitySettingsService),
+    _bleStatus(server, &_securitySettingsService, nullptr),
+#endif
 #if FT_ENABLED(FT_SECURITY)
     _authenticationService(server, &_securitySettingsService),
     _userThemeService(server, &_securitySettingsService, &_securitySettingsService),
@@ -97,6 +101,9 @@ void ESP8266React::begin() {
 #endif
 #if FT_ENABLED(FT_MQTT)
   _mqttSettingsService.begin();
+#endif
+#if FT_ENABLED(FT_BLE)
+  _bleSettingsService.begin();
 #endif
 #if FT_ENABLED(FT_SECURITY)
   _securitySettingsService.begin();

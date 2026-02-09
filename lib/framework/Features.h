@@ -33,5 +33,15 @@
 #define FT_UPLOAD_FIRMWARE 0
 #endif
 
+// BLE feature ON by default for ESP32 IF there's enough flash
+// Note: BLE adds ~600KB. On smaller partitions, disable with -D FT_BLE=0
+#ifndef FT_BLE
+#ifdef ESP32
+#define FT_BLE 0  // Disabled by default due to flash constraints
+#else
+#define FT_BLE 0  // Always disabled on ESP8266
+#endif
+#endif
+
 
 #endif

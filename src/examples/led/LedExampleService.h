@@ -6,6 +6,13 @@
 #include <WebSocketTxRx.h>
 #include <SettingValue.h>
 
+#if FT_ENABLED(FT_BLE)
+#include <BlePubSub.h>
+#include <BLEServer.h>
+#include <BLEService.h>
+#include <BLECharacteristic.h>
+#endif
+
 #define LED_PIN 2
 
 #define DEFAULT_LED_STATE false
@@ -68,7 +75,11 @@ class LedExampleService : public StatefulService<LedExampleState> {
  public:
   LedExampleService(AsyncWebServer* server,
                     SecurityManager* securityManager,
-                    AsyncMqttClient* mqttClient);
+                    AsyncMqttClient* mqttClient
+#if FT_ENABLED(FT_BLE)
+                    ,BLEServer* bleServer
+#endif
+                    );
   void begin();
 
  private:
@@ -81,6 +92,19 @@ class LedExampleService : public StatefulService<LedExampleState> {
   String _mqttBasePath;
   String _mqttName;
   String _mqttUniqueId;
+
+#if FT_ENABLED(FT_BLE)
+  BlePubSub<LedExampleState> _blePubSub;
+  BLEServer* _bleServer;
+  BLEService* _bleService;
+  BLECharacteristic* _bleCharacteristic;
+  
+  // Inline BLE configuration - single-layer pattern
+  static constexpr const char* BLE_SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214";
+  static constexpr const char* BLE_CHAR_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
+  
+  void configureBle();
+#endif
 
   void configureMqtt();
   void onConfigUpdated();

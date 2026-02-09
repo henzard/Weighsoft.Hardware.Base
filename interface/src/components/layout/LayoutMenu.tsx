@@ -5,6 +5,7 @@ import { Divider, List } from '@mui/material';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DeviceHubIcon from '@mui/icons-material/DeviceHub';
+import BluetoothIcon from '@mui/icons-material/Bluetooth';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LockIcon from '@mui/icons-material/Lock';
 import WifiIcon from '@mui/icons-material/Wifi';
@@ -34,6 +35,9 @@ const LayoutMenu: FC = () => {
         )}
         {features.mqtt && (
           <LayoutMenuItem icon={DeviceHubIcon} label="MQTT" to="/mqtt" />
+        )}
+        {features.ble && (
+          <LayoutMenuItem icon={BluetoothIcon} label="BLE" to="/ble" />
         )}
         {features.security && (
           <LayoutMenuItem icon={LockIcon} label="Security" to="/security" disabled={!authenticatedContext.me.admin} />

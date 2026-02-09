@@ -37,6 +37,11 @@ void FeaturesService::features(AsyncWebServerRequest* request) {
 #else
   root["upload_firmware"] = false;
 #endif
+#if FT_ENABLED(FT_BLE)
+  root["ble"] = true;
+#else
+  root["ble"] = false;
+#endif
   response->setLength();
   request->send(response);
 }
