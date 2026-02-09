@@ -1,0 +1,183 @@
+---
+description: Windows/PowerShell command execution guidelines - avoid bash-specific syntax
+alwaysApply: true
+globs: ["**/*"]
+---
+
+# Windows PowerShell Command Execution Rule
+
+When running commands on Windows (OS: win32), follow these guidelines.
+
+## PowerShell Limitations
+
+### ❌ Heredoc Syntax NOT Supported
+
+PowerShell does NOT support bash heredoc syntax (`<<EOF`).
+
+**❌ WRONG - Will fail on Windows:**
+```bash
+git commit -m "$(cat <<'EOF'
+Multi-line
+commit message
+EOF
+)"
+```
+
+**✅ CORRECT - Use file-based approach:**
+```powershell
+# 1. Write message to file
+Write-File commit_msg.txt "Multi-line`ncommit message"
+
+# 2. Commit using file
+git commit -F commit_msg.txt
+
+# 3. Clean up
+Remove-Item commit_msg.txt
+```
+
+**✅ CORRECT - Use single-line with `n:**
+```powershell
+git commit -m "Multi-line`ncommit message"
+```
+
+### ❌ Redirection Operators
+
+**❌ WRONG - Bash redirection:**
+```bash
+cat <<EOF > file.txt
+content
+EOF
+```
+
+**✅ CORRECT - PowerShell:**
+```powershell
+@"
+content
+"@ | Out-File file.txt
+```
+
+### ❌ Process Substitution
+
+**❌ WRONG - Not supported:**
+```bash
+diff <(cmd1) <(cmd2)
+```
+
+**✅ CORRECT - Use intermediate files:**
+```powershell
+cmd1 > temp1.txt
+cmd2 > temp2.txt
+diff temp1.txt temp2.txt
+```
+
+## Shell Detection
+
+Check OS before using bash-specific syntax:
+
+```
+User Info: OS Version: win32 10.0.26300
+Shell: powershell
+```
+
+If `Shell: powershell` or `OS: win32`:
+- ❌ No heredoc (`<<EOF`)
+- ❌ No process substitution (`<()`)
+- ❌ No bash redirection (`<`, `>` in compound commands)
+- ✅ Use file-based workarounds
+- ✅ Use PowerShell-native commands
+
+## Git Commit Messages on Windows
+
+### For Multi-line Commit Messages
+
+**Best Practice:**
+```powershell
+# 1. Write to temporary file using Write tool
+Write-File commit_msg.txt "..."
+
+# 2. Commit using -F flag
+git commit -F commit_msg.txt
+
+# 3. Delete temporary file using Delete tool
+Remove-Item commit_msg.txt
+```
+
+**Alternative (inline with backtick-n):**
+```powershell
+git commit -m "First line`n`nSecond paragraph`n- Bullet point"
+```
+
+### For Single-line Commit Messages
+
+```powershell
+git commit -m "Simple commit message"
+```
+
+## Common Windows Command Patterns
+
+### File Operations
+```powershell
+# ✅ Read file
+Get-Content file.txt
+
+# ✅ Write file
+Set-Content file.txt "content"
+"content" | Out-File file.txt
+
+# ✅ Append to file
+Add-Content file.txt "more content"
+```
+
+### String Handling
+```powershell
+# ✅ Multi-line strings
+@"
+Line 1
+Line 2
+"@
+
+# ✅ Escape special chars
+"String with `n newline and `t tab"
+```
+
+## Quick Reference
+
+When you see PowerShell or win32:
+1. **No heredoc** - Use file or `n for newlines
+2. **Use Shell tool with Write/Delete** - For multi-line content
+3. **Test incrementally** - PowerShell syntax differs from bash
+
+## Examples from Codebase
+
+### ❌ Failed Pattern (Don't repeat)
+```bash
+git commit -m "$(cat <<'EOF'
+docs: improve device project extension workflow
+
+Add comprehensive documentation...
+EOF
+)"
+# Error: Missing file specification after redirection operator
+```
+
+### ✅ Correct Pattern (Use this)
+```powershell
+# Use Write tool
+Write-File commit_msg.txt "docs: improve device project extension workflow`n`nAdd comprehensive documentation..."
+
+# Commit
+git commit -F commit_msg.txt
+
+# Cleanup
+Delete commit_msg.txt
+```
+
+## Summary
+
+**Remember**: PowerShell is NOT bash. Always check OS/Shell before using:
+- Heredoc syntax
+- Process substitution  
+- Complex redirection
+- Bash-specific features
+
+**When in doubt**: Use file-based approach with Write/Delete tools.
