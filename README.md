@@ -106,6 +106,9 @@ Resource                         | Description
 [interface/](interface)          | React based front end
 [lib/framework/](lib/framework)  | C++ back end for the ESP8266/ESP32 device
 [src/](src)                      | The main.cpp and demo project to get you started
+[src/examples/led/](src/examples/led) | LED example - single-layer architecture reference
+[src/examples/display/](src/examples/display) | LCD display - bidirectional I2C device control
+[lib/LiquidCrystal_I2C/](lib/LiquidCrystal_I2C) | Vendored LCD I2C library (ESP32 patched)
 [scripts/](scripts)              | Scripts that build the React interface as part of the platformio build
 [platformio.ini](platformio.ini) | PlatformIO project configuration file
 
@@ -413,6 +416,9 @@ For detailed architecture documentation, see:
 - [C4 Diagrams](docs/C4-CONTEXT.md)
 - [Design Patterns](docs/DESIGN-PATTERNS.md)
 - [API Reference](docs/API-REFERENCE.md)
+- [LED Example](docs/LED-EXAMPLE.md)
+- [LCD Display Example](docs/DISPLAY-EXAMPLE.md)
+- [Device Template Guide](docs/DEVICE-TEMPLATE-GUIDE.md)
 
 ### Initializing the framework
 
@@ -789,3 +795,4 @@ This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.t
 * [ArduinoJson](https://github.com/bblanchon/ArduinoJson)
 * [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)
 * [AsyncMqttClient](https://github.com/marvinroger/async-mqtt-client)
+* [LiquidCrystal_I2C](https://github.com/marcoschwartz/LiquidCrystal_I2C) - LCD I2C driver (vendored with ESP32 patch)

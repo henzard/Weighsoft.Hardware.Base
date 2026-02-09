@@ -486,6 +486,83 @@ Get enabled feature flags.
 }
 ```
 
+### Display Project Endpoints
+
+#### GET /rest/display
+
+Get LCD display state.
+
+**Security**: IS_AUTHENTICATED
+
+**Response** (200 OK):
+```json
+{
+  "line1": "Weighsoft",
+  "line2": "Display Ready",
+  "i2c_address": 39,
+  "backlight": true
+}
+```
+
+**Field Descriptions**:
+- `line1`: Text on LCD line 1 (max 16 characters)
+- `line2`: Text on LCD line 2 (max 16 characters)
+- `i2c_address`: I2C address as integer (39 = 0x27, 63 = 0x3F)
+- `backlight`: LCD backlight state
+
+#### POST /rest/display
+
+Update LCD display state.
+
+**Security**: IS_AUTHENTICATED
+
+**Request**:
+```json
+{
+  "line1": "Hello World",
+  "line2": "From REST",
+  "i2c_address": 39,
+  "backlight": true
+}
+```
+
+**Response** (200 OK): Same as GET response
+
+**Notes**:
+- Text exceeding 16 characters is truncated server-side
+- Changing `i2c_address` reinitializes the LCD hardware
+- Partial updates supported (omitted fields keep current values)
+
+### LED Project Endpoints
+
+#### GET /rest/ledExample
+
+Get LED state.
+
+**Security**: IS_AUTHENTICATED
+
+**Response** (200 OK):
+```json
+{
+  "led_on": false
+}
+```
+
+#### POST /rest/ledExample
+
+Update LED state.
+
+**Security**: IS_AUTHENTICATED
+
+**Request**:
+```json
+{
+  "led_on": true
+}
+```
+
+**Response** (200 OK): Same as GET response
+
 ### Demo Project Endpoints
 
 #### GET /rest/lightState
@@ -570,6 +647,50 @@ Update MQTT topic configuration.
 
 ### WebSocket Endpoints
 
+#### /ws/display
+
+Real-time LCD display state synchronization.
+
+**Security**: IS_AUTHENTICATED
+
+**Payload Format**:
+```json
+{
+  "line1": "Hello",
+  "line2": "World",
+  "i2c_address": 39,
+  "backlight": true
+}
+```
+
+**Flow**:
+1. Client connects
+2. Server sends client ID
+3. Server sends current display state
+4. Client can send updates (bidirectional)
+5. Server broadcasts changes to all clients
+6. LCD hardware updates in real-time
+
+#### /ws/ledExample
+
+Real-time LED state synchronization.
+
+**Security**: IS_AUTHENTICATED
+
+**Payload Format**:
+```json
+{
+  "led_on": true
+}
+```
+
+**Flow**:
+1. Client connects
+2. Server sends client ID
+3. Server sends current state
+4. Client can send updates (bidirectional)
+5. Server broadcasts changes to all clients
+
 #### /ws/lightState
 
 Real-time light state synchronization.
@@ -594,7 +715,39 @@ Real-time light state synchronization.
 
 ### Topic Structure
 
-Projects define their own MQTT topic structure. The demo project uses:
+Projects define their own MQTT topic structure.
+
+#### Display MQTT Topics
+
+**Base Path**: `weighsoft/display/{unique_id}`
+
+| Topic | Direction | Purpose |
+|-------|-----------|---------|
+| `weighsoft/display/{unique_id}/data` | Device → Broker | Publishes current state on change |
+| `weighsoft/display/{unique_id}/set` | Broker → Device | Receives commands to update display |
+
+**Payload** (both topics):
+```json
+{
+  "line1": "Hello",
+  "line2": "World",
+  "i2c_address": 39,
+  "backlight": true
+}
+```
+
+#### LED MQTT Topics
+
+**Base Path**: `weighsoft/led/{unique_id}`
+
+| Topic | Direction | Purpose |
+|-------|-----------|---------|
+| `weighsoft/led/{unique_id}/data` | Device → Broker | Publishes LED state on change |
+| `weighsoft/led/{unique_id}/set` | Broker → Device | Receives commands to update LED |
+
+#### Demo Project MQTT Topics
+
+The demo project uses:
 
 **Base Path**: Configured in `/rest/brokerSettings`
 

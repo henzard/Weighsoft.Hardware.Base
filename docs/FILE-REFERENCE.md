@@ -82,6 +82,30 @@ C:\Project\Weighsoft.Hardware.Base\
 
 **Pattern**: Add your custom services here
 
+### /src/examples/ - Device Examples
+
+#### /src/examples/led/ - LED Example
+
+| File | Purpose |
+|------|---------|
+| `LedExampleService.h` | LED service header with inline `LedExampleState` |
+| `LedExampleService.cpp` | LED service: GPIO control, MQTT config, BLE |
+
+#### /src/examples/display/ - LCD Display
+
+| File | Purpose |
+|------|---------|
+| `DisplayService.h` | Display service header with inline `DisplayState` |
+| `DisplayService.cpp` | Display service: LCD I2C control, MQTT config, BLE |
+
+### /lib/LiquidCrystal_I2C/ - Vendored LCD Library
+
+| File | Purpose |
+|------|---------|
+| `LiquidCrystal_I2C.h` | LCD I2C driver header |
+| `LiquidCrystal_I2C.cpp` | LCD I2C driver implementation |
+| `library.json` | Library metadata (patched for ESP32 compatibility) |
+
 ### Configuration Files
 
 | File | Purpose |
@@ -178,6 +202,41 @@ C:\Project\Weighsoft.Hardware.Base\
 | `api.ts` | Custom API endpoints |
 | `types.ts` | TypeScript types |
 | `validators.ts` | Form validation |
+
+### /interface/src/examples/ - Device Example UIs
+
+#### /interface/src/examples/led/ - LED Example UI
+
+| File | Purpose |
+|------|---------|
+| `LedExample.tsx` | Main router with tabs |
+| `LedExampleInfo.tsx` | Information page |
+| `LedControlRest.tsx` | REST control form |
+| `LedControlWebSocket.tsx` | WebSocket control form |
+| `LedControlBle.tsx` | BLE instructions |
+| `types.ts` | `LedExampleState` interface |
+| `api.ts` | LED REST API functions |
+
+#### /interface/src/examples/display/ - LCD Display UI
+
+| File | Purpose |
+|------|---------|
+| `Display.tsx` | Main router with tabs (Info, Control, BLE) |
+| `DisplayInfo.tsx` | Hardware setup and wiring guide |
+| `DisplayControl.tsx` | Combined REST/WebSocket control with preview |
+| `DisplayBle.tsx` | BLE connection instructions |
+
+#### /interface/src/api/ - Display API
+
+| File | Purpose |
+|------|---------|
+| `display.ts` | `readDisplayData`, `updateDisplayData` functions |
+
+#### /interface/src/types/ - Display Types
+
+| File | Purpose |
+|------|---------|
+| `display.ts` | `DisplayData` interface |
 
 ### /interface/src/types/ - TypeScript Types
 
