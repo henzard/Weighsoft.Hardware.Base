@@ -1,0 +1,173 @@
+---
+description: Guidelines for adding new device projects following LED/Serial patterns
+alwaysApply: false
+globs: ["src/examples/**/*", "interface/src/examples/**/*"]
+---
+
+# Adding Device Projects Rule
+
+When creating a new device project in `src/examples/` or `interface/src/examples/`, follow these guidelines.
+
+## Quick Reference
+
+**Before starting:** Read @docs/DEVICE-TEMPLATE-GUIDE.md for step-by-step checklist
+
+## Template Selection
+
+### Use LED Pattern Template
+- Bidirectional control (read + write)
+- User controls device via UI
+- Examples: relays, motors, actuators, displays
+
+**Copy from:** `src/examples/led/` and `interface/src/examples/led/`
+
+### Use Serial Pattern Template
+- Read-only data streaming
+- Device pushes data to channels
+- Examples: sensors, GPS, scales, monitoring
+
+**Copy from:** `src/examples/serial/` and `interface/src/examples/serial/`
+
+## Backend Implementation Checklist
+
+### State Class (MyDeviceState.h)
+- [ ] Define state fields
+- [ ] Implement `static void read(MyDeviceState&, JsonObject&)`
+- [ ] Implement `static StateUpdateResult update(JsonObject&, MyDeviceState&)`
+- [ ] Use snake_case for JSON keys
+
+### Service Class (MyDeviceService.h/cpp)
+- [ ] Inherit from `StatefulService<MyDeviceState>`
+- [ ] Compose infrastructure: `HttpEndpoint`, `WebSocketTxRx`, `MqttPubSub`, `BlePubSub`
+- [ ] Define UUIDs for BLE (use uuidgenerator.net)
+- [ ] Define MQTT topics
+- [ ] Implement `begin()`, `loop()` (if needed), `configureBle()`
+
+### Common Backend Mistakes to Avoid
+❌ `MqttPubSub(read, read, ...)` → ✅ `MqttPubSub(read, update, ...)`
+❌ Configuring BLE in `begin()` → ✅ Use `onBleServerStarted` callback
+❌ Forgetting `loop()` call in main.cpp
+
+## Frontend Implementation Checklist
+
+### Type Definitions (types/mydevice.ts)
+- [ ] Create TypeScript interface matching backend state
+- [ ] Use camelCase (auto-converts from backend snake_case)
+
+### API Layer (api/mydevice.ts)
+- [ ] Import `AXIOS` from `'./endpoints'` (NOT `'./axios-fetch'`)
+- [ ] Define endpoint constant
+- [ ] Create API functions returning `AxiosPromise<T>`
+
+### Endpoint Configuration (api/endpoints.ts)
+- [ ] Add WebSocket path using `WS_BASE_URL` template:
+  ```typescript
+  export const MY_DEVICE_SOCKET_PATH = `${WS_BASE_URL}mydevice`;
+  ```
+- [ ] Do NOT hardcode `/ws/` prefix
+
+### UI Components (examples/mydevice/)
+
+**Required structure:**
+```
+examples/mydevice/
+├── MyDevice.tsx          # Router with tabs
+├── MyDeviceInfo.tsx      # Documentation tab
+├── MyDeviceWebSocket.tsx # Real-time tab
+└── MyDeviceBle.tsx       # BLE instructions
+```
+
+**Import patterns:**
+```typescript
+// ✅ CORRECT imports
+import { AXIOS } from '../../api/endpoints';
+import { useRest, useWs } from '../../utils';
+import { SectionContent, FormLoader } from '../../components';
+```
+
+### Hook Usage
+
+**useRest (for configuration forms):**
+```typescript
+const { loadData, saveData, data, setData } = useRest<MyDeviceSettings>({
+  read: () => readMyDeviceSettings()
+});
+
+// Loading state
+if (!data) return <FormLoader />;
+```
+
+**useWs (for real-time monitoring):**
+```typescript
+const WEBSOCKET_URL = `${WEB_SOCKET_ROOT}mydevice`;
+const { connected, updateData, data } = useWs<MyDeviceData>(WEBSOCKET_URL);
+
+// Note: Pass URL string directly, not an object
+```
+
+### Integration
+
+**Menu (project/ProjectMenu.tsx):**
+- [ ] Add menu item with concise label (not "My Device Example")
+- [ ] Use appropriate Material-UI icon
+
+**Routing (project/ProjectRouting.tsx):**
+- [ ] Add route: `<Route path="my-device/*" element={<MyDevice />} />`
+
+## Documentation Requirements
+
+### Always Update
+- [ ] `docs/API-REFERENCE.md` - Add REST, WebSocket, MQTT, BLE endpoints
+- [ ] `docs/FILE-REFERENCE.md` - List new backend and frontend files
+- [ ] `README.md` - Add to project structure description
+
+### Create Device Documentation
+- [ ] `docs/MY-DEVICE-EXAMPLE.md` following LED-EXAMPLE.md or SERIAL-EXAMPLE.md template
+- [ ] Include: Purpose, Features, Hardware Setup, Architecture, API Reference, Use Cases
+
+## Testing Checklist
+
+- [ ] Backend compiles for ESP8266 and ESP32
+- [ ] REST endpoint returns data: `GET /rest/mydevice`
+- [ ] WebSocket streams updates: `/ws/mydevice`
+- [ ] MQTT publishes to: `weighsoft/mydevice/{unique_id}/...`
+- [ ] BLE service advertises with correct UUID
+- [ ] Frontend builds without errors
+- [ ] UI components load and display data
+- [ ] Menu and routing work correctly
+
+## File Naming Conventions
+
+### Backend
+- `MyDeviceState.h` - State structure
+- `MyDeviceService.h` - Service header
+- `MyDeviceService.cpp` - Service implementation
+
+### Frontend
+- `MyDevice.tsx` - Main router (PascalCase)
+- `MyDeviceInfo.tsx` - Info tab
+- `MyDeviceRest.tsx` - REST polling (if needed)
+- `MyDeviceWebSocket.tsx` - Real-time streaming
+- `MyDeviceBle.tsx` - BLE instructions
+
+### API
+- `api/mydevice.ts` - API functions (lowercase)
+- `types/mydevice.ts` - TypeScript types (lowercase)
+
+## Anti-Patterns
+
+❌ Creating helper scripts or workarounds
+❌ Mixing LED and Serial patterns
+❌ Skipping documentation updates
+❌ Using `any` types in TypeScript
+❌ Hardcoding WebSocket paths
+❌ Importing from wrong locations
+❌ Verbose labels ("My Device Example" → "My Device")
+
+## Reference Implementations
+
+- **LED Example**: @src/examples/led/ and @interface/src/examples/led/
+- **Serial Example**: @src/examples/serial/ and @interface/src/examples/serial/
+- **Extension Guide**: @docs/EXTENSION-GUIDE.md
+- **Device Template Guide**: @docs/DEVICE-TEMPLATE-GUIDE.md
+- **Frontend Patterns**: @docs/FRONTEND-PATTERNS.md
