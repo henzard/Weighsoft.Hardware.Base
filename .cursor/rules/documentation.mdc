@@ -1,0 +1,81 @@
+---
+description: Ensure documentation is valuable and properly located in docs/
+alwaysApply: false
+---
+
+# Documentation Standards Rule
+
+Maintain high-quality, valuable documentation in the `docs/` folder.
+
+## Core Principle
+
+**Only create documentation that adds real value.** No placeholder or redundant docs.
+
+## Documentation Location
+
+All documentation MUST be in: `docs/`
+
+See structure in: @docs/README.md
+
+## Existing Documentation
+
+Reference these files instead of creating new ones:
+
+- **Architecture**: @docs/ARCHITECTURE.md
+- **C4 Diagrams**: @docs/C4-CONTEXT.md, @docs/C4-CONTAINER.md, @docs/C4-COMPONENT-BACKEND.md, @docs/C4-COMPONENT-FRONTEND.md
+- **Design Patterns**: @docs/DESIGN-PATTERNS.md
+- **Extension Guide**: @docs/EXTENSION-GUIDE.md
+- **API Reference**: @docs/API-REFERENCE.md
+- **Security**: @docs/SECURITY.md
+- **Configuration**: @docs/CONFIGURATION.md
+- **Data Flows**: @docs/DATA-FLOWS.md
+- **Sequence Diagrams**: @docs/SEQUENCE-DIAGRAMS.md
+- **File Reference**: @docs/FILE-REFERENCE.md
+
+## When to Create Documentation
+
+✅ **DO create docs for:**
+- New architectural patterns not covered in existing docs
+- New features with complex workflows
+- Breaking changes that affect existing patterns
+- API endpoints not in @docs/API-REFERENCE.md
+
+❌ **DON'T create docs for:**
+- Temporary or experimental code
+- Self-explanatory code
+- Duplicating information already in existing docs
+- Standard patterns already documented in @docs/DESIGN-PATTERNS.md
+
+## When to Update Documentation
+
+Update existing docs when:
+- Adding new REST/WebSocket endpoints → Update @docs/API-REFERENCE.md
+- Changing architectural patterns → Update @docs/DESIGN-PATTERNS.md
+- Adding new feature → Update @docs/EXTENSION-GUIDE.md with example
+- Changing build process → Update @docs/CONFIGURATION.md
+- Modifying security model → Update @docs/SECURITY.md
+
+## Documentation Quality Standards
+
+1. **Accurate**: Keep synchronized with code
+2. **Actionable**: Include concrete examples and file references
+3. **Concise**: No unnecessary verbosity
+4. **Current**: Update when code changes
+5. **Referenced**: Use @ syntax to reference files: `@src/LightStateService.h`
+
+## Example: Adding a New Service
+
+When adding a new service:
+
+1. Implement following @docs/EXTENSION-GUIDE.md
+2. Add API endpoints to @docs/API-REFERENCE.md
+3. Reference the pattern in @docs/DESIGN-PATTERNS.md (don't duplicate)
+4. DON'T create a separate doc file for one service
+
+## What NOT to Do
+
+❌ Create docs outside `docs/` folder
+❌ Create placeholder docs with "TODO" sections
+❌ Duplicate patterns already in @docs/DESIGN-PATTERNS.md
+❌ Create per-service documentation (use comments in code instead)
+❌ Write documentation for standard practices AI already knows

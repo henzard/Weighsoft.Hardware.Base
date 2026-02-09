@@ -1,0 +1,336 @@
+---
+description: Backend service implementation pattern - enforces StatefulService composition
+alwaysApply: true
+globs: ["src/**/*.{cpp,h}", "lib/framework/**/*.{cpp,h}"]
+---
+
+# Backend Service Pattern Rule
+
+Enforce consistent service implementation following the StatefulService pattern.
+
+## Complete Guide
+
+Reference: @docs/EXTENSION-GUIDE.md (step-by-step implementation)
+
+## Service Implementation Checklist
+
+### 1. Define State Class
+
+```cpp
+class MyServiceState {
+public:
+  // State fields
+  String value;
+  int count;
+  
+  // REQUIRED: JSON serialization methods
+  static void read(MyServiceState& state, JsonObject& root) {
+    root["value"] = state.value;
+    root["count"] = state.count;
+  }
+  
+  static StateUpdateResult update(JsonObject& root, MyServiceState& state) {
+    bool changed = false;
+    
+    String newValue = root["value"] | "";
+    if (state.value != newValue) {
+      state.value = newValue;
+      changed = true;
+    }
+    
+    int newCount = root["count"] | 0;
+    if (state.count != newCount) {
+      state.count = newCount;
+      changed = true;
+    }
+    
+    return changed ? StateUpdateResult::CHANGED : StateUpdateResult::UNCHANGED;
+  }
+};
+```
+
+### 2. Inherit from StatefulService
+
+```cpp
+class MyService : public StatefulService<MyServiceState> {
+public:
+  MyService(
+    AsyncWebServer* server,
+    SecurityManager* securityManager,
+    AsyncMqttClient* mqttClient
+  );
+  
+  void begin();
+  
+private:
+  // Composed infrastructure components
+  HttpEndpoint<MyServiceState> _httpEndpoint;
+  FSPersistence<MyServiceState> _fsPersistence;
+  WebSocketTxRx<MyServiceState> _webSocket;
+  MqttPubSub<MyServiceState> _mqttPubSub;
+  
+  // Dependencies
+  AsyncMqttClient* _mqttClient;
+  
+  // Helper methods
+  void onConfigUpdated();
+};
+```
+
+### 3. Compose Infrastructure in Constructor
+
+```cpp
+MyService::MyService(
+  AsyncWebServer* server,
+  SecurityManager* securityManager,
+  AsyncMqttClient* mqttClient
+) :
+  _httpEndpoint(MyServiceState::read,
+                MyServiceState::update,
+                this,
+                server,
+                "/rest/myService",
+                securityManager,
+                AuthenticationPredicates::IS_AUTHENTICATED),
+  _fsPersistence(MyServiceState::read,
+                 MyServiceState::update,
+                 this,
+                 "/config/myService.json"),
+  _webSocket(MyServiceState::read,
+             MyServiceState::update,
+             this,
+             server,
+             "/ws/myService",
+             securityManager,
+             AuthenticationPredicates::IS_AUTHENTICATED),
+  _mqttPubSub(MyServiceState::read,
+              MyServiceState::update,
+              this,
+              mqttClient,
+              "myDevice/myService"),
+  _mqttClient(mqttClient) {
+  
+  // Register update handler
+  addUpdateHandler(
+    [this](const String& originId) { onConfigUpdated(); },
+    false  // allowRemove = false
+  );
+}
+```
+
+### 4. Implement begin() Method
+
+```cpp
+void MyService::begin() {
+  // Load persisted state
+  _fsPersistence.readFromFS();
+  
+  // Initialize hardware/peripherals
+  // Setup initial state
+}
+```
+
+### 5. Implement loop() Method (Optional)
+
+Only if periodic tasks needed:
+
+```cpp
+void MyService::loop() {
+  // Periodic tasks (reading sensors, etc.)
+}
+```
+
+### 6. Register in main.cpp
+
+```cpp
+// In main.cpp
+#include <MyService.h>
+
+MyService myService(&server, &securityManager, &mqttClient);
+
+void setup() {
+  esp8266React.begin();
+  myService.begin();
+}
+
+void loop() {
+  esp8266React.loop();
+  myService.loop();  // If implemented
+}
+```
+
+## Endpoint Paths Convention
+
+Follow consistent naming:
+
+```cpp
+#define MY_SERVICE_REST_ENDPOINT    "/rest/myService"
+#define MY_SERVICE_WS_ENDPOINT      "/ws/myService"
+```
+
+## File Storage Convention
+
+Store configuration in `/config/` directory:
+
+```cpp
+_fsPersistence(..., "/config/myService.json")
+```
+
+## Security Predicates
+
+Use appropriate security level:
+
+```cpp
+// No authentication required (public endpoints)
+AuthenticationPredicates::NONE_REQUIRED
+
+// Requires authenticated user
+AuthenticationPredicates::IS_AUTHENTICATED
+
+// Requires admin privileges
+AuthenticationPredicates::IS_ADMIN
+```
+
+## Complete Example
+
+Reference: @src/LightStateService.h and @src/LightStateService.cpp
+
+Shows:
+- State class with read/update methods
+- StatefulService inheritance
+- Infrastructure composition
+- Update handler registration
+- Hardware control (LED)
+
+## Service Composition Matrix
+
+| Component | Purpose | Required? |
+|-----------|---------|-----------|
+| HttpEndpoint | REST API | Optional* |
+| FSPersistence | Persist state | Optional* |
+| WebSocketTxRx | Real-time sync | Optional |
+| MqttPubSub | MQTT integration | Optional |
+
+*At least one is recommended for most services
+
+## State Update Flow
+
+1. Update received (HTTP/WebSocket/MQTT)
+2. `MyState::update()` called
+3. Returns CHANGED/UNCHANGED/ERROR
+4. If CHANGED: Update handlers notified
+5. State propagated to other components
+
+Reference: @docs/SEQUENCE-DIAGRAMS.md
+
+## Update Handler Pattern
+
+```cpp
+void MyService::onConfigUpdated() {
+  // Read current state
+  MyServiceState state = read([](MyServiceState& state) { return state; });
+  
+  // Act on state change
+  if (state.enabled) {
+    // Enable feature
+  } else {
+    // Disable feature
+  }
+}
+```
+
+## Common Patterns
+
+### Settings Service
+
+Stores configuration, no real-time updates needed:
+- ✅ HttpEndpoint (REST API for forms)
+- ✅ FSPersistence (save/load config)
+- ❌ WebSocket (not needed)
+- ❌ MQTT (optional)
+
+Example: WiFiSettingsService
+
+### Status Service
+
+Real-time status display:
+- ✅ WebSocketTxRx (live updates)
+- ❌ HttpEndpoint (read-only via WebSocket)
+- ❌ FSPersistence (not persisted)
+- ✅ MqttPubSub (optional, for MQTT integration)
+
+Example: LightStateService
+
+### Configuration + Status
+
+Both settings and live status:
+- ✅ HttpEndpoint (configuration API)
+- ✅ WebSocketTxRx (live status)
+- ✅ FSPersistence (save config)
+- ✅ MqttPubSub (optional)
+
+## What NOT to Do
+
+❌ Don't inherit from infrastructure components:
+```cpp
+class MyService : public HttpEndpoint<MyState> {  // WRONG
+};
+```
+
+❌ Don't skip JSON serialization methods:
+```cpp
+class MyState {
+  String value;
+  // Missing read() and update() - REQUIRED
+};
+```
+
+❌ Don't access _state directly:
+```cpp
+_state.value = "new";  // NOT thread-safe
+```
+
+❌ Don't skip begin() implementation:
+```cpp
+// Must load persisted state in begin()
+void MyService::begin() {
+  _fsPersistence.readFromFS();  // REQUIRED
+}
+```
+
+❌ Don't forget to register in main.cpp:
+```cpp
+// Service won't work without begin() call
+myService.begin();
+```
+
+## PlatformIO Library Dependencies
+
+If service needs external libraries, add to `platformio.ini`:
+
+```ini
+lib_deps =
+  DHT sensor library@1.4.4
+```
+
+Reference: @docs/CONFIGURATION.md
+
+## Testing Checklist
+
+- [ ] State class has read() and update() methods
+- [ ] Service inherits from StatefulService
+- [ ] Infrastructure components composed in constructor
+- [ ] begin() method loads persisted state
+- [ ] Update handlers registered properly
+- [ ] Registered in main.cpp
+- [ ] Endpoint paths follow convention
+- [ ] Security predicates appropriate
+- [ ] Compiles for ESP8266 and ESP32
+- [ ] Memory usage acceptable
+
+## Learning Path
+
+1. Read: @docs/DESIGN-PATTERNS.md (understand patterns)
+2. Follow: @docs/EXTENSION-GUIDE.md (step-by-step)
+3. Reference: @src/LightStateService.h (canonical example)
+4. Study: @docs/SEQUENCE-DIAGRAMS.md (understand flows)

@@ -1,0 +1,369 @@
+---
+description: Ensure consistent API design across all endpoints
+alwaysApply: false
+globs: ["src/**/*.{cpp,h}", "interface/src/api/**/*.ts"]
+---
+
+# API Consistency Rule
+
+Maintain consistent API design patterns across all REST and WebSocket endpoints.
+
+## API Reference
+
+Document all endpoints in: @docs/API-REFERENCE.md
+
+## Endpoint Path Conventions
+
+### REST Endpoints
+
+Pattern: `/rest/{serviceName}`
+
+```cpp
+#define MY_SERVICE_ENDPOINT "/rest/myService"
+```
+
+Examples:
+- `/rest/wifiSettings` - WiFi configuration
+- `/rest/mqttSettings` - MQTT configuration
+- `/rest/lightState` - Light control
+
+### WebSocket Endpoints
+
+Pattern: `/ws/{serviceName}`
+
+```cpp
+#define MY_SERVICE_WEBSOCKET "/ws/myService"
+```
+
+Examples:
+- `/ws/lightState` - Real-time light status
+- `/ws/systemStatus` - System monitoring
+
+### MQTT Topics
+
+Pattern: `{deviceName}/{serviceName}`
+
+```cpp
+"myDevice/lightState"      // Status topic
+"myDevice/lightState/set"  // Command topic
+```
+
+## JSON Naming Conventions
+
+### Backend (C++)
+
+Use **snake_case** in JSON:
+
+```cpp
+static void read(MyState& state, JsonObject& root) {
+  root["wifi_ssid"] = state.wifiSsid;       // snake_case
+  root["ip_address"] = state.ipAddress;      // snake_case
+  root["is_enabled"] = state.isEnabled;      // snake_case
+}
+```
+
+### Frontend (TypeScript)
+
+Use **camelCase** in TypeScript (auto-converted):
+
+```typescript
+interface WifiSettings {
+  wifiSsid: string;      // Matches wifi_ssid in JSON
+  ipAddress: string;     // Matches ip_address in JSON
+  isEnabled: boolean;    // Matches is_enabled in JSON
+}
+```
+
+**Axios automatically converts between conventions.**
+
+## HTTP Status Codes
+
+Use appropriate status codes:
+
+### Success Codes
+
+- `200 OK` - Successful GET/PUT
+- `201 Created` - Resource created
+- `204 No Content` - Successful DELETE
+
+### Client Error Codes
+
+- `400 Bad Request` - Invalid input
+- `401 Unauthorized` - Not authenticated
+- `403 Forbidden` - Authenticated but not authorized
+- `404 Not Found` - Resource doesn't exist
+
+### Server Error Codes
+
+- `500 Internal Server Error` - Server-side error
+
+## Request/Response Format
+
+### GET Request
+
+```http
+GET /rest/wifiSettings HTTP/1.1
+Authorization: Bearer <jwt-token>
+```
+
+### GET Response
+
+```json
+{
+  "wifi_ssid": "MyNetwork",
+  "wifi_password": "********",
+  "wifi_hostname": "esp-device"
+}
+```
+
+### PUT Request
+
+```http
+PUT /rest/wifiSettings HTTP/1.1
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+
+{
+  "wifi_ssid": "NewNetwork",
+  "wifi_password": "newpassword",
+  "wifi_hostname": "esp-device"
+}
+```
+
+### PUT Response
+
+```json
+{
+  "wifi_ssid": "NewNetwork",
+  "wifi_password": "********",
+  "wifi_hostname": "esp-device"
+}
+```
+
+## Security Pattern
+
+### Protected Endpoints
+
+Always specify security predicate:
+
+```cpp
+HttpEndpoint<MyState> _httpEndpoint(
+  ...,
+  server,
+  "/rest/myService",
+  securityManager,
+  AuthenticationPredicates::IS_AUTHENTICATED  // REQUIRED
+);
+```
+
+### Security Levels
+
+```cpp
+// Public endpoint (no auth)
+AuthenticationPredicates::NONE_REQUIRED
+
+// Requires login
+AuthenticationPredicates::IS_AUTHENTICATED
+
+// Requires admin role
+AuthenticationPredicates::IS_ADMIN
+```
+
+Reference: @docs/SECURITY.md
+
+## WebSocket Message Format
+
+### Client → Server
+
+```json
+{
+  "led_on": true
+}
+```
+
+### Server → Client
+
+```json
+{
+  "led_on": true
+}
+```
+
+WebSocket messages use same JSON format as REST API.
+
+## Error Response Format
+
+### Backend Error
+
+Return appropriate HTTP status and error in response:
+
+```cpp
+if (invalid) {
+  return request->send(400, "application/json", "{\"error\":\"Invalid input\"}");
+}
+```
+
+### Frontend Error Handling
+
+```typescript
+try {
+  await API.saveSettings(data);
+  enqueueSnackbar('Settings saved', { variant: 'success' });
+} catch (error) {
+  enqueueSnackbar('Failed to save settings', { variant: 'error' });
+}
+```
+
+## MQTT Message Format
+
+### Home Assistant Discovery Format
+
+```json
+{
+  "name": "Device Light",
+  "unique_id": "esp123_light",
+  "state_topic": "myDevice/lightState",
+  "command_topic": "myDevice/lightState/set"
+}
+```
+
+### State Message
+
+```json
+{
+  "state": "ON"
+}
+```
+
+### Command Message
+
+```json
+{
+  "state": "OFF"
+}
+```
+
+Reference: @docs/API-REFERENCE.md (MQTT Topics section)
+
+## Documentation Requirements
+
+When adding new endpoint, update @docs/API-REFERENCE.md with:
+
+1. **Endpoint path**
+2. **HTTP method**
+3. **Security requirements**
+4. **Request schema** (if applicable)
+5. **Response schema**
+6. **Example request/response**
+
+## Consistency Checklist
+
+- [ ] Endpoint follows `/rest/{service}` or `/ws/{service}` pattern
+- [ ] JSON uses snake_case
+- [ ] TypeScript uses camelCase
+- [ ] Security predicate specified
+- [ ] HTTP status codes appropriate
+- [ ] Error handling implemented
+- [ ] Documented in @docs/API-REFERENCE.md
+
+## Examples from Codebase
+
+### REST API Example
+
+Reference: WiFiSettingsService
+- Endpoint: `/rest/wifiSettings`
+- Method: GET, PUT
+- Security: IS_ADMIN
+
+### WebSocket Example
+
+Reference: @src/LightStateService.h
+- Endpoint: `/ws/lightState`
+- Real-time bidirectional
+- Security: IS_AUTHENTICATED
+
+### MQTT Example
+
+Reference: LightStateService
+- Status topic: `{device}/lightState`
+- Command topic: `{device}/lightState/set`
+- Format: Home Assistant compatible
+
+## What NOT to Do
+
+❌ Inconsistent endpoint paths:
+```cpp
+"/api/wifi"           // Wrong prefix
+"/settings/wifi"      // Wrong prefix
+"/rest/wifi-config"   // Wrong naming (use camelCase: wifiConfig)
+```
+
+❌ Mixed naming conventions:
+```cpp
+root["WiFi_SSID"] = ...;      // Wrong: use snake_case
+root["wifiSsid"] = ...;       // Wrong: use snake_case
+root["wifi_ssid"] = ...;      // Correct
+```
+
+❌ Ignoring security:
+```cpp
+HttpEndpoint<MyState> _endpoint(
+  ...,
+  "/rest/adminSettings",
+  securityManager,
+  AuthenticationPredicates::NONE_REQUIRED  // Wrong for admin settings
+);
+```
+
+❌ Undocumented endpoints:
+```cpp
+// Added new endpoint but didn't update @docs/API-REFERENCE.md
+```
+
+❌ Inconsistent status codes:
+```cpp
+return request->send(200, ...);  // Should be 400 for errors
+```
+
+## Frontend API Client
+
+Use centralized API client:
+
+```typescript
+// interface/src/api/endpoints.ts
+export const API = {
+  getSettings: () => axios.get('/rest/wifiSettings'),
+  saveSettings: (data) => axios.put('/rest/wifiSettings', data)
+};
+```
+
+## Validation
+
+Use consistent validation approach:
+
+### Backend Validation
+
+```cpp
+static StateUpdateResult update(JsonObject& root, MyState& state) {
+  String ssid = root["wifi_ssid"] | "";
+  if (ssid.length() == 0 || ssid.length() > 32) {
+    return StateUpdateResult::ERROR;  // Invalid
+  }
+  // ... update state
+  return StateUpdateResult::CHANGED;
+}
+```
+
+### Frontend Validation
+
+```typescript
+import Schema from 'async-validator';
+
+const schema = new Schema({
+  wifi_ssid: { 
+    required: true, 
+    max: 32,
+    message: 'SSID must be 1-32 characters' 
+  }
+});
+```

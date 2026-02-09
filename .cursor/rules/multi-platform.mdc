@@ -1,0 +1,140 @@
+---
+description: Ensure ESP8266 and ESP32 compatibility for all backend code
+alwaysApply: false
+globs: ["src/**/*.{cpp,h}", "lib/framework/**/*.{cpp,h}"]
+---
+
+# Multi-Platform Compatibility Rule
+
+Ensure all backend code works on both ESP8266 and ESP32 platforms.
+
+## Core Principle
+
+**Never write ESP32-only code without ESP8266 fallback.**
+
+## Platform Conditionals
+
+Use preprocessor directives for platform-specific code:
+
+```cpp
+#ifdef ESP32
+  // ESP32-specific code
+#elif defined(ESP8266)
+  // ESP8266-specific code
+#endif
+```
+
+## Common Patterns
+
+### Example: LED Polarity (from @src/LightStateService.h)
+
+```cpp
+#ifdef ESP32
+#define LED_ON 0x1
+#define LED_OFF 0x0
+#elif defined(ESP8266)
+#define LED_ON 0x0
+#define LED_OFF 0x1
+#endif
+```
+
+### Example: Mutex (Thread Safety)
+
+```cpp
+#ifdef ESP32
+  // Use FreeRTOS mutex
+  SemaphoreHandle_t _accessMutex;
+#elif defined(ESP8266)
+  // No mutex needed (single core)
+#endif
+```
+
+## Platform Abstractions
+
+### Use Framework Abstractions
+
+✅ **DO use:**
+- `ESPFS` for filesystem (not direct LittleFS calls)
+- `AsyncWebServer` (works on both platforms)
+- `AsyncMqttClient` (works on both platforms)
+- Standard Arduino APIs
+
+❌ **DON'T use directly:**
+- ESP32-specific APIs without ESP8266 equivalent
+- ESP8266-specific APIs without ESP32 equivalent
+
+### File System Example
+
+```cpp
+✅ Correct:
+#include <ESPFS.h>
+ESPFS.begin();
+
+❌ Wrong:
+#include <LittleFS.h>  // Platform-specific
+LittleFS.begin();
+```
+
+## Memory Constraints
+
+### ESP8266 Limitations
+
+- **RAM**: ~80KB available (vs ESP32: ~520KB)
+- **Flash**: Typically 4MB
+- **Single core** (no threading)
+
+### Design for Minimal Memory
+
+1. **Use `const` for strings**: Store in flash, not RAM
+   ```cpp
+   const char* SETTING_NAME = "wifi_ssid";  // Stored in flash
+   ```
+
+2. **Avoid large buffers**: Use streaming where possible
+
+3. **Be careful with String**: Consider `const char*` for static strings
+
+4. **Test memory usage**: Check available heap
+
+## Testing Checklist
+
+When writing cross-platform code:
+
+- [ ] Does it compile for ESP8266?
+- [ ] Does it compile for ESP32?
+- [ ] Are platform conditionals correct?
+- [ ] Is memory usage acceptable for ESP8266?
+- [ ] Are there ESP32-only features that need fallbacks?
+
+## Build Configuration
+
+Reference: @docs/CONFIGURATION.md
+
+Platform definitions in `platformio.ini`:
+- `env:esp12e` - ESP8266 target
+- `env:node32s` - ESP32 target
+
+## Common Platform Differences
+
+| Feature | ESP8266 | ESP32 |
+|---------|---------|-------|
+| Cores | 1 | 2 |
+| RAM | ~80KB | ~520KB |
+| Threading | No | Yes (FreeRTOS) |
+| Bluetooth | No | Yes |
+| LED Polarity | Inverted | Normal |
+
+## Examples from Codebase
+
+Reference these files for platform-agnostic code:
+- @lib/framework/ESP8266React.cpp
+- @lib/framework/StatefulService.h
+- @src/LightStateService.h
+
+## What NOT to Do
+
+❌ Use ESP32-only features without checks
+❌ Assume unlimited memory (think ESP8266)
+❌ Hard-code platform-specific values
+❌ Skip testing on both platforms
+❌ Use platform-specific libraries without abstraction

@@ -1,0 +1,106 @@
+---
+description: Maintain clean root directory and established folder structure
+alwaysApply: true
+---
+
+# Project Structure Rule
+
+Keep the root directory clean and follow the established folder organization.
+
+## Folder Structure
+
+Reference: @docs/FILE-REFERENCE.md
+
+```
+Project Root/
+├── src/                    # Application code
+├── lib/framework/          # Framework code
+├── interface/              # React frontend
+├── docs/                   # Documentation only
+├── .cursor/rules/          # Cursor rules
+├── platformio.ini          # Build config
+├── features.ini            # Feature flags
+├── factory_settings.ini    # Default settings
+└── README.md               # Project overview
+```
+
+## Where to Put Files
+
+### Backend Code
+- **Framework code**: `lib/framework/` (StatefulService, HttpEndpoint, etc.)
+- **Application code**: `src/` (main.cpp, services like LightStateService)
+
+### Frontend Code
+- **React components**: `interface/src/components/`
+- **Feature UI**: `interface/src/project/`, `interface/src/ap/`, `interface/src/wifi/`, etc.
+- **API clients**: `interface/src/api/`
+- **Utilities**: `interface/src/utils/`
+
+### Documentation
+- **All docs**: `docs/` (no exceptions)
+
+### Configuration
+- **Build settings**: Root level (platformio.ini, features.ini, factory_settings.ini)
+
+### Build Artifacts
+- **Never commit**: `.pio/`, `.pioenvs/`, `interface/build/`, `interface/node_modules/`
+- Use `.gitignore` for these
+
+## Root Directory Rules
+
+✅ **ALLOWED in root:**
+- Configuration files: `platformio.ini`, `features.ini`, `factory_settings.ini`
+- Project metadata: `README.md`, `LICENSE`, `.gitignore`
+- Hidden folders: `.cursor/`, `.git/`, `.vscode/`
+
+❌ **NOT ALLOWED in root:**
+- Source code files (`.cpp`, `.h`, `.ts`, `.tsx`)
+- Build artifacts
+- Temporary files
+- Test files (put in appropriate subfolder)
+- Scripts (create `scripts/` if needed)
+- Random markdown files (put in `docs/`)
+
+## Examples
+
+### ✅ Correct Placement
+
+**New sensor service:**
+```
+src/SensorService.h
+src/SensorService.cpp
+```
+
+**New React component:**
+```
+interface/src/components/SensorDisplay.tsx
+```
+
+**New documentation:**
+```
+docs/SENSOR-INTEGRATION.md
+```
+
+### ❌ Incorrect Placement
+
+**Don't put in root:**
+```
+❌ SensorService.cpp          # Should be in src/
+❌ helper.py                  # Create scripts/ folder
+❌ SENSOR-NOTES.md            # Should be in docs/
+❌ test.cpp                   # Should be in test/ subfolder
+```
+
+## Keeping Root Clean
+
+1. **Review root contents regularly**
+2. **Move misplaced files immediately**
+3. **Use .gitignore for build artifacts**
+4. **Don't create temporary files in root**
+
+## File Organization Patterns
+
+Reference patterns in existing code:
+- Backend services: Follow @src/LightStateService.h pattern
+- Frontend components: Follow @interface/src/project/LightStateWebSocketForm.tsx pattern
+- Infrastructure: Follow @lib/framework/StatefulService.h pattern

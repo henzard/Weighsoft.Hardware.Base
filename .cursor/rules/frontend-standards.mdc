@@ -1,0 +1,278 @@
+---
+description: React/TypeScript standards for lightweight, responsive UI
+alwaysApply: false
+globs: ["interface/src/**/*.{ts,tsx}"]
+---
+
+# Frontend Standards Rule
+
+Keep the UI lightweight, fast, and maintainable.
+
+## Core Principle
+
+**Bundle size target: <200KB gzipped.** Every dependency adds weight.
+
+## Technology Stack
+
+Reference: @docs/ARCHITECTURE.md
+
+- **React**: 18.1.0
+- **Material-UI**: 5.8.0 (already included)
+- **TypeScript**: 4.6.4
+- **Axios**: HTTP client
+- **Sockette**: WebSocket client
+- **React Router**: 6.3.0
+
+## Communication Patterns
+
+### useRest Hook - For Configuration Forms
+
+Use for settings that require manual save:
+
+```typescript
+const { loadData, saveData, data, setData } = useRest<MySettings>({
+  read: () => API.getSettings()
+});
+
+// User edits form
+// User clicks "Save" button
+// Then call saveData()
+```
+
+### useWs Hook - For Real-Time Status
+
+Use for live status displays (from @interface/src/project/LightStateWebSocketForm.tsx):
+
+```typescript
+const { connected, updateData, data } = useWs<MyState>(WEBSOCKET_URL);
+
+// Auto-updates when backend state changes
+// Can send updates with updateData()
+```
+
+**Decision Rule:**
+- Configuration/Settings → `useRest` (manual save)
+- Live Status/Monitoring → `useWs` (auto-sync)
+
+## Component Standards
+
+### Use Material-UI Components
+
+✅ Already included:
+```typescript
+import { Button, TextField, Switch, Grid } from '@mui/material';
+```
+
+❌ Don't add:
+- Heavy UI libraries (Bootstrap, Ant Design, etc.)
+- Duplicate functionality already in Material-UI
+
+### Shared Components
+
+Use existing components from `interface/src/components/`:
+
+```typescript
+import { 
+  SectionContent,
+  BlockFormControlLabel,
+  FormLoader,
+  MessageBox
+} from '../components';
+```
+
+Reference: @interface/src/project/LightStateWebSocketForm.tsx
+
+## State Management
+
+### React Context for Global State
+
+Use Context API for:
+- Authentication: `AuthenticationContext`
+- Feature flags: `FeaturesContext`
+- Layout settings: `LayoutContext`
+
+```typescript
+const { me } = useContext(AuthenticationContext);
+```
+
+### Local State for Component State
+
+Use `useState` for component-specific state:
+
+```typescript
+const [formData, setFormData] = useState<MySettings>(DEFAULT_SETTINGS);
+```
+
+## TypeScript Standards
+
+### Strict Typing
+
+✅ **ALWAYS:**
+```typescript
+interface LightState {
+  led_on: boolean;
+}
+
+const updateData = (data: LightState) => {
+  // Type-safe
+};
+```
+
+❌ **NEVER:**
+```typescript
+const updateData = (data: any) => {  // No 'any' types
+  // Not type-safe
+};
+```
+
+### Type Definitions
+
+Create types in `types.ts` files:
+
+```typescript
+// interface/src/project/types.ts
+export interface LightState {
+  led_on: boolean;
+}
+```
+
+## Form Validation
+
+Use `async-validator`:
+
+```typescript
+import Schema from 'async-validator';
+
+const schema = new Schema({
+  ssid: { required: true, message: 'SSID is required' }
+});
+```
+
+## Bundle Size Optimization
+
+### 1. Avoid Heavy Dependencies
+
+❌ Don't add without justification:
+- Lodash (use native JS)
+- Moment.js (use date-fns or native)
+- Heavy charting libraries
+- CSS frameworks (have Material-UI)
+
+### 2. Code Splitting
+
+Use React lazy loading for large features:
+
+```typescript
+const HeavyComponent = lazy(() => import('./HeavyComponent'));
+```
+
+### 3. Optimize Images
+
+- Use appropriate formats (WebP when possible)
+- Compress images
+- Use SVG for icons
+
+### 4. Tree Shaking
+
+Import only what you need:
+
+```typescript
+✅ import { Button } from '@mui/material';
+❌ import * from '@mui/material';
+```
+
+## API Integration
+
+### Axios Interceptors
+
+Already configured with JWT:
+
+```typescript
+import { API } from '../api/endpoints';
+
+// Automatically includes JWT token
+const response = await API.getSettings();
+```
+
+### Error Handling
+
+```typescript
+try {
+  await API.saveSettings(data);
+} catch (error) {
+  // Show user-friendly error
+  enqueueSnackbar('Failed to save settings', { variant: 'error' });
+}
+```
+
+## Routing
+
+Use React Router 6:
+
+```typescript
+import { Routes, Route } from 'react-router-dom';
+
+<Routes>
+  <Route path="/wifi/*" element={<WiFiSettings />} />
+  <Route path="/mqtt/*" element={<MqttSettings />} />
+</Routes>
+```
+
+### Protected Routes
+
+Use `RequireAuthentication` wrapper:
+
+```typescript
+<Route path="/admin" element={
+  <RequireAuthentication>
+    <AdminPage />
+  </RequireAuthentication>
+} />
+```
+
+## Performance Best Practices
+
+1. **Memoization**: Use `useMemo` and `useCallback` for expensive operations
+2. **Avoid Re-renders**: Use React.memo for pure components
+3. **Debounce Input**: For search/filter inputs
+4. **Lazy Loading**: For routes and heavy components
+
+## UI/UX Standards
+
+1. **Loading States**: Always show loading indicators
+2. **Error States**: Display user-friendly error messages
+3. **Responsive**: Works on mobile and desktop
+4. **Accessible**: Use semantic HTML and ARIA labels
+5. **Snackbar Feedback**: Use Material-UI Snackbar for notifications
+
+## Example: Complete Feature Component
+
+Reference: @interface/src/project/LightStateWebSocketForm.tsx
+
+Shows:
+- useWs hook usage
+- Material-UI components
+- Loading states
+- Type-safe implementation
+
+## What NOT to Do
+
+❌ Add heavy dependencies without checking bundle size
+❌ Use 'any' types in TypeScript
+❌ Duplicate Material-UI functionality
+❌ Skip loading/error states
+❌ Ignore mobile responsiveness
+❌ Create inline styles (use Material-UI theme)
+❌ Mix useRest and useWs for same data source
+❌ Skip form validation
+
+## Checklist for New Components
+
+- [ ] Uses Material-UI components
+- [ ] TypeScript strict typing (no 'any')
+- [ ] Appropriate communication pattern (useRest or useWs)
+- [ ] Loading states implemented
+- [ ] Error handling implemented
+- [ ] Mobile responsive
+- [ ] Uses shared components from components/
+- [ ] No new heavy dependencies

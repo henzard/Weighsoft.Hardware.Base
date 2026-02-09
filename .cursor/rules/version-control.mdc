@@ -1,0 +1,65 @@
+---
+description: Enforce git commit and push workflow for code changes
+alwaysApply: false
+globs: ["src/**/*.{cpp,h}", "lib/framework/**/*.{cpp,h}", "interface/src/**/*.{ts,tsx}"]
+---
+
+# Version Control Rule
+
+Enforce git commit and push for any code changes to maintain proper version control.
+
+## When This Applies
+
+Any changes to source code files:
+- Backend: `src/`, `lib/framework/`
+- Frontend: `interface/src/`
+- Configuration: `platformio.ini`, `features.ini`, `factory_settings.ini`
+
+## Requirements
+
+### 1. Commit Code Changes
+
+After making code changes, always commit:
+
+```bash
+git add .
+git commit -m "type: description"
+```
+
+### 2. Commit Message Format
+
+Use conventional commit format:
+- `feat: add new sensor service`
+- `fix: resolve WebSocket reconnection issue`
+- `refactor: improve StatefulService thread safety`
+- `docs: update API reference for new endpoint`
+- `test: add unit tests for LightStateService`
+
+### 3. Push Changes
+
+After committing, push to remote:
+
+```bash
+git push
+```
+
+### 4. Never Leave Uncommitted Changes
+
+- Don't leave files in modified or staged state
+- Complete the commit/push cycle
+- Ensure clean working directory
+
+## What NOT to Do
+
+❌ Skip version control for "small changes"
+❌ Use vague commit messages like "updates" or "fixes"
+❌ Commit without pushing to remote
+❌ Commit build artifacts or temporary files (use `.gitignore`)
+
+## Quick Workflow
+
+1. Make code changes
+2. Test changes locally
+3. `git add .`
+4. `git commit -m "type: clear description"`
+5. `git push`

@@ -1,0 +1,248 @@
+---
+description: Core framework design patterns - ALWAYS follow these
+alwaysApply: true
+---
+
+# Design Patterns Rule
+
+**Critical architectural patterns that MUST be followed. No exceptions.**
+
+Reference: @docs/DESIGN-PATTERNS.md
+
+## Core Pattern: StatefulService
+
+All state management MUST use `StatefulService<T>` pattern.
+
+### Pattern Structure (from @lib/framework/StatefulService.h)
+
+```cpp
+class MyState {
+public:
+  // State fields
+  String value;
+  
+  // REQUIRED: JSON serialization methods
+  static void read(MyState& state, JsonObject& root) {
+    root["value"] = state.value;
+  }
+  
+  static StateUpdateResult update(JsonObject& root, MyState& state) {
+    String newValue = root["value"] | "";
+    if (state.value != newValue) {
+      state.value = newValue;
+      return StateUpdateResult::CHANGED;
+    }
+    return StateUpdateResult::UNCHANGED;
+  }
+};
+
+class MyService : public StatefulService<MyState> {
+public:
+  void begin();
+private:
+  // Composed infrastructure components
+};
+```
+
+### Complete Example: @src/LightStateService.h
+
+Reference this canonical example for:
+- State class structure
+- StatefulService inheritance
+- Service composition
+- JSON serialization methods
+
+## CRITICAL RULES
+
+### 1. NEVER Access _state Directly
+
+❌ **WRONG:**
+```cpp
+_state.value = "new";  // NOT THREAD-SAFE
+```
+
+✅ **CORRECT:**
+```cpp
+update([](MyState& state) {
+  state.value = "new";
+  return StateUpdateResult::CHANGED;
+}, "source");
+```
+
+### 2. ALWAYS Return Correct StateUpdateResult
+
+```cpp
+StateUpdateResult::CHANGED   // State was modified
+StateUpdateResult::UNCHANGED // No modification
+StateUpdateResult::ERROR     // Invalid input
+```
+
+### 3. ALWAYS Use Origin Tracking
+
+Prevents infinite update loops:
+
+```cpp
+void onUpdate(const String& originId) {
+  if (originId == "mqtt") return;  // Don't echo back
+  // Publish to MQTT
+}
+```
+
+### 4. ALWAYS Implement Static JSON Methods
+
+Both methods are REQUIRED:
+
+```cpp
+static void read(MyState& state, JsonObject& root);
+static StateUpdateResult update(JsonObject& root, MyState& state);
+```
+
+## Service Composition Pattern
+
+Compose infrastructure components, don't inherit:
+
+```cpp
+class MyService : public StatefulService<MyState> {
+private:
+  HttpEndpoint<MyState> _httpEndpoint;      // REST API
+  FSPersistence<MyState> _fsPersistence;    // File storage
+  WebSocketTxRx<MyState> _webSocket;        // WebSocket
+  MqttPubSub<MyState> _mqttPubSub;          // MQTT
+};
+```
+
+Reference: @docs/EXTENSION-GUIDE.md for complete implementation steps.
+
+## Infrastructure Components
+
+### HttpEndpoint<T>
+
+Exposes REST API:
+```cpp
+HttpEndpoint<MyState> _httpEndpoint(
+  this,                      // StatefulService
+  server,                    // AsyncWebServer
+  "/rest/myService",         // Endpoint path
+  securityManager,           // Security
+  AuthenticationPredicates::IS_AUTHENTICATED
+);
+```
+
+### FSPersistence<T>
+
+Persists to filesystem:
+```cpp
+FSPersistence<MyState> _fsPersistence(
+  this,                      // StatefulService
+  "/config/myService.json"   // File path
+);
+```
+
+### WebSocketTxRx<T>
+
+WebSocket communication:
+```cpp
+WebSocketTxRx<MyState> _webSocket(
+  this,                      // StatefulService
+  server,                    // AsyncWebServer
+  "/ws/myService",           // WebSocket path
+  securityManager,           // Security
+  AuthenticationPredicates::IS_AUTHENTICATED
+);
+```
+
+### MqttPubSub<T>
+
+MQTT integration:
+```cpp
+MqttPubSub<MyState> _mqttPubSub(
+  this,                      // StatefulService
+  mqttClient,                // AsyncMqttClient
+  "myDevice/myService",      // Topic base
+  MyState::read,             // Serialize
+  MyState::update            // Deserialize
+);
+```
+
+## Update Handler Pattern
+
+Register handlers for state changes:
+
+```cpp
+addUpdateHandler(
+  [this](const String& originId) {
+    // React to state changes
+  },
+  false  // allowRemove = false for permanent handlers
+);
+```
+
+## ANTI-PATTERNS TO AVOID
+
+❌ **Direct State Access**
+```cpp
+_state.value = "bad";  // NOT thread-safe
+```
+
+❌ **Ignoring StateUpdateResult**
+```cpp
+static StateUpdateResult update(JsonObject& root, MyState& state) {
+  state.value = root["value"];
+  // Missing: return CHANGED or UNCHANGED
+}
+```
+
+❌ **Update Loops Without Origin Check**
+```cpp
+void onUpdate(const String& originId) {
+  // Missing origin check
+  publishToMqtt();  // Will cause infinite loop
+}
+```
+
+❌ **Patchy Workarounds**
+```cpp
+// DON'T bypass patterns for "quick fixes"
+// ALWAYS use StatefulService even if it seems "overkill"
+```
+
+❌ **Breaking Service Composition**
+```cpp
+class MyService : public HttpEndpoint<MyState> {  // WRONG
+  // Don't inherit infrastructure, compose it
+};
+```
+
+❌ **Missing JSON Methods**
+```cpp
+class MyState {
+  String value;
+  // Missing read() and update() methods - REQUIRED
+};
+```
+
+## Decision Framework
+
+**When adding new functionality:**
+
+1. **Does it manage state?** → Use StatefulService
+2. **Needs REST API?** → Compose HttpEndpoint
+3. **Needs persistence?** → Compose FSPersistence
+4. **Needs WebSocket?** → Compose WebSocketTxRx
+5. **Needs MQTT?** → Compose MqttPubSub
+
+**NEVER create patchy solutions that bypass these patterns.**
+
+## Learning Resources
+
+- **Full pattern catalog**: @docs/DESIGN-PATTERNS.md
+- **Complete implementation guide**: @docs/EXTENSION-GUIDE.md
+- **Canonical example**: @src/LightStateService.h
+- **Data flow details**: @docs/DATA-FLOWS.md
+- **Sequence diagrams**: @docs/SEQUENCE-DIAGRAMS.md
+
+## Enforcement
+
+This rule has `alwaysApply: true` because design pattern integrity is CRITICAL.
+
+Any code that violates these patterns MUST be refactored, not patched.
