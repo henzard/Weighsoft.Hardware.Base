@@ -86,6 +86,102 @@ For data sources (Serial pattern):
 4. Update data source (Serial2, SPI, I2C, etc.)
 5. Implement parsing logic for your protocol
 
+## Common Mistakes Checklist
+
+Before implementing your device, review these common mistakes from real implementations:
+
+### Backend Mistakes
+
+❌ **Wrong MqttPubSub constructor**
+```cpp
+// ❌ WRONG - Passing read function twice
+_mqttPubSub(MyState::read, MyState::read, ...)
+
+// ✅ CORRECT - Pass update function as second argument
+_mqttPubSub(MyState::read, MyState::update, ...)
+```
+
+❌ **Forgetting BLE server callback**
+```cpp
+// ❌ WRONG - Configuring BLE in begin()
+void begin() {
+  configureBle();  // BLEServer not ready yet!
+}
+
+// ✅ CORRECT - Use onBleServerStarted callback in main.cpp
+esp8266React.onBleServerStarted([](BLEServer* bleServer) {
+  myService->setBleServer(bleServer);
+  myService->configureBle();
+});
+```
+
+❌ **Missing loop() call in main.cpp**
+```cpp
+// Don't forget to call loop() for services that need periodic execution
+void loop() {
+  esp8266React.loop();
+  myService->loop();  // REQUIRED for Serial, sensors, etc.
+}
+```
+
+### Frontend Mistakes
+
+❌ **Wrong import paths**
+```typescript
+// ❌ WRONG
+import { AXIOS } from './axios-fetch';  // Doesn't exist
+import { useRest } from '../../components';  // Wrong location
+
+// ✅ CORRECT
+import { AXIOS } from './endpoints';
+import { useRest } from '../../utils';
+```
+
+❌ **Hardcoded WebSocket paths**
+```typescript
+// ❌ WRONG - Duplicates /ws/ prefix
+export const MY_SOCKET_PATH = '/ws/mydevice';
+
+// ✅ CORRECT - Use WS_BASE_URL
+export const MY_SOCKET_PATH = `${WS_BASE_URL}mydevice`;
+```
+
+❌ **Wrong useRest destructuring**
+```typescript
+// ❌ WRONG - 'loading' doesn't exist
+const { data, loading } = useRest<T>({ read });
+
+// ✅ CORRECT - Check data for loading state
+const { data } = useRest<T>({ read });
+if (!data) return <FormLoader />;
+```
+
+❌ **Wrong useWs signature**
+```typescript
+// ❌ WRONG - useWs doesn't take object parameter
+const { data } = useWs<T>({ url: WEBSOCKET_URL });
+
+// ✅ CORRECT - Pass URL string directly
+const { data } = useWs<T>(WEBSOCKET_URL);
+```
+
+### Integration Mistakes
+
+❌ **Inconsistent naming**
+```typescript
+// Menu says "Serial Monitor" but route is "serial"
+<LayoutMenuItem path="/serial" label="Serial Monitor" />
+
+// ✅ CORRECT - Keep naming consistent and concise
+<LayoutMenuItem path="/serial" label="Serial" />
+```
+
+❌ **Not updating all documentation**
+- Update API-REFERENCE.md with new endpoints
+- Update FILE-REFERENCE.md with new files
+- Update README.md if it's a major feature
+- Create device-specific docs (LED-EXAMPLE.md, SERIAL-EXAMPLE.md)
+
 ## Complete Example: Temperature Sensor Service
 
 ### Requirements

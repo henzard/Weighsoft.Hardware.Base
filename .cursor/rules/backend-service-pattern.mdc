@@ -239,6 +239,91 @@ void MyService::onConfigUpdated() {
 }
 ```
 
+## BLE Integration Pattern
+
+### Callback-Based Initialization
+
+BLE services MUST be configured after `BLEServer` is initialized:
+
+```cpp
+// In main.cpp setup()
+esp8266React.onBleServerStarted([](BLEServer* bleServer) {
+  // Configure all services that use BLE
+  ledService->setBleServer(bleServer);
+  ledService->configureBle();
+  
+  serialService->setBleServer(bleServer);
+  serialService->configureBle();
+});
+```
+
+### Service Implementation
+
+```cpp
+class MyService : public StatefulService<MyState> {
+#if FT_ENABLED(FT_BLE)
+private:
+  BLEServer* _bleServer = nullptr;
+  BlePubSub<MyState> _blePubSub;
+  
+public:
+  void setBleServer(BLEServer* bleServer) {
+    _bleServer = bleServer;
+  }
+  
+  void configureBle() {
+    if (!_bleServer) return;
+    
+    // Create BLE service
+    BLEService* pService = _bleServer->createService(SERVICE_UUID);
+    
+    // Configure characteristic with BlePubSub
+    _blePubSub.begin(pService, CHAR_UUID, PROPERTY_READ | PROPERTY_NOTIFY);
+    
+    pService->start();
+  }
+#endif
+};
+```
+
+### Common BLE Mistakes
+
+❌ Configuring BLE in `begin()`:
+```cpp
+void MyService::begin() {
+  configureBle();  // ❌ BLEServer not ready yet!
+}
+```
+
+✅ Use callback in main.cpp:
+```cpp
+esp8266React.onBleServerStarted([](BLEServer* bleServer) {
+  myService->setBleServer(bleServer);
+  myService->configureBle();  // ✅ Called when server is ready
+});
+```
+
+## MQTT PubSub Constructor Pattern
+
+**Correct signature:**
+```cpp
+MqttPubSub(
+  StateRead<T> read,      // Serialization function
+  StateUpdate<T> update,  // Deserialization function
+  StatefulService<T>* statefulService,
+  AsyncMqttClient* mqttClient,
+  const String& baseTopic
+)
+```
+
+**Common mistake:**
+```cpp
+❌ _mqttPubSub(MyState::read, MyState::read, ...)  // Wrong: read twice
+✅ _mqttPubSub(MyState::read, MyState::update, ...) // Correct
+```
+
+**Note:** Even for read-only services, pass `update` function (it will return `UNCHANGED`).
+
 ## Common Patterns
 
 ### Settings Service

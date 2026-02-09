@@ -54,6 +54,176 @@ const { connected, updateData, data } = useWs<MyState>(WEBSOCKET_URL);
 - Configuration/Settings → `useRest` (manual save)
 - Live Status/Monitoring → `useWs` (auto-sync)
 
+## Import Location Reference
+
+### API Imports
+
+**AXIOS instance:**
+```typescript
+// ✅ CORRECT
+import { AXIOS } from './endpoints';
+import { AXIOS } from '../../api/endpoints';
+
+// ❌ WRONG
+import { AXIOS } from './axios-fetch';  // File doesn't exist
+import axios from 'axios';              // Don't use raw axios
+```
+
+**WebSocket base URLs:**
+```typescript
+// ✅ CORRECT
+import { WEB_SOCKET_ROOT, WS_BASE_URL } from '../../api/endpoints';
+
+// Construct paths
+export const MY_SOCKET_PATH = `${WS_BASE_URL}mydevice`;
+```
+
+### Hook Imports
+
+**Location:** `utils/` directory
+```typescript
+// ✅ CORRECT
+import { useRest, useWs } from '../../utils';
+
+// ❌ WRONG
+import { useRest, useWs } from '../../components';
+```
+
+### Component Imports
+
+**Location:** `components/` directory
+```typescript
+// ✅ CORRECT
+import { 
+  SectionContent, 
+  FormLoader, 
+  RouterTabs, 
+  useRouterTab,
+  useLayoutTitle 
+} from '../../components';
+```
+
+## Hook Usage Patterns
+
+### useRest Hook
+
+**Signature:**
+```typescript
+const { 
+  loadData,      // () => Promise<void>
+  saveData,      // (data: T) => Promise<void>
+  data,          // T | undefined
+  setData        // (data: T) => void
+} = useRest<T>({ read: () => AxiosPromise<T> });
+```
+
+**Loading state:**
+```typescript
+if (!data) {
+  return <FormLoader />;
+}
+```
+
+**❌ Common mistake:**
+```typescript
+// 'loading' doesn't exist
+const { data, loading } = useRest<T>({ read });
+```
+
+### useWs Hook
+
+**Signature:**
+```typescript
+const { 
+  connected,     // boolean
+  updateData,    // (data: Partial<T>) => void
+  data           // T | undefined
+} = useWs<T>(websocketUrl: string);
+```
+
+**❌ Common mistake:**
+```typescript
+// Wrong: Don't pass object
+const { data } = useWs<T>({ url: WEBSOCKET_URL });
+
+// Correct: Pass string directly
+const { data } = useWs<T>(WEBSOCKET_URL);
+```
+
+## WebSocket URL Construction
+
+**Pattern:**
+```typescript
+import { WEB_SOCKET_ROOT } from '../../api/endpoints';
+
+// Define in component file
+const MY_WEBSOCKET_URL = `${WEB_SOCKET_ROOT}mydevice`;
+
+// Use with hook
+const { connected, data } = useWs<MyData>(MY_WEBSOCKET_URL);
+```
+
+**In endpoints.ts:**
+```typescript
+// ✅ CORRECT - Use WS_BASE_URL
+export const MY_SOCKET_PATH = `${WS_BASE_URL}mydevice`;
+
+// ❌ WRONG - Don't hardcode /ws/ prefix
+export const MY_SOCKET_PATH = '/ws/mydevice';
+```
+
+## Device Project Component Structure
+
+**Standard 5-file pattern:**
+```
+examples/mydevice/
+├── MyDevice.tsx          # Main router with tabs
+├── MyDeviceInfo.tsx      # Info/documentation tab
+├── MyDeviceRest.tsx      # REST polling tab (optional)
+├── MyDeviceWebSocket.tsx # Real-time streaming tab
+└── MyDeviceBle.tsx       # BLE instructions tab
+```
+
+**Plus API layer:**
+```
+api/mydevice.ts           # API functions
+types/mydevice.ts         # TypeScript interfaces
+```
+
+**Typical MyDevice.tsx structure:**
+```typescript
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { Tab } from '@mui/material';
+import { RouterTabs, useRouterTab, useLayoutTitle } from '../../components';
+
+import MyDeviceInfo from './MyDeviceInfo';
+import MyDeviceWebSocket from './MyDeviceWebSocket';
+import MyDeviceBle from './MyDeviceBle';
+
+const MyDevice: FC = () => {
+  useLayoutTitle('My Device');
+  const { routerTab } = useRouterTab();
+
+  return (
+    <>
+      <RouterTabs value={routerTab}>
+        <Tab value="" label="Info" />
+        <Tab value="websocket" label="Monitor" />
+        <Tab value="ble" label="BLE" />
+      </RouterTabs>
+      <Routes>
+        <Route path="" element={<MyDeviceInfo />} />
+        <Route path="websocket" element={<MyDeviceWebSocket />} />
+        <Route path="ble" element={<MyDeviceBle />} />
+        <Route path="*" element={<Navigate replace to="" />} />
+      </Routes>
+    </>
+  );
+};
+
+export default MyDevice;
+```
+
 ## Component Standards
 
 ### Use Material-UI Components
