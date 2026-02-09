@@ -2,6 +2,7 @@ import { FC } from 'react';
 import { Navigate, Routes, Route } from 'react-router-dom';
 
 import LedExample from '../examples/led/LedExample';
+import SerialMonitor from '../examples/serial/SerialMonitor';
 
 const ProjectRouting: FC = () => {
   return (
@@ -14,6 +15,10 @@ const ProjectRouting: FC = () => {
         // LED Example project routes
       }
       <Route path="led-example/*" element={<LedExample />} />
+      {
+        // Serial Monitor project routes
+      }
+      <Route path="serial/*" element={<SerialMonitor />} />
     </Routes>
   );
 };

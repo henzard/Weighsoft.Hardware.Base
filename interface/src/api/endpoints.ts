@@ -5,6 +5,9 @@ export const API_BASE_URL = '/rest/';
 export const ACCESS_TOKEN = 'access_token';
 export const WEB_SOCKET_ROOT = calculateWebSocketRoot(WS_BASE_URL);
 
+// WebSocket endpoint paths
+export const SERIAL_SOCKET_PATH = '/ws/serial';
+
 export const AXIOS = axios.create({
   baseURL: API_BASE_URL,
   headers: {
