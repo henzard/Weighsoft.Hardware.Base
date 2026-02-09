@@ -9,7 +9,7 @@ import SerialWebSocket from './SerialWebSocket';
 import SerialBle from './SerialBle';
 
 const SerialMonitor: FC = () => {
-  useLayoutTitle("Serial Monitor");
+  useLayoutTitle("Serial");
   const { routerTab } = useRouterTab();
 
   return (

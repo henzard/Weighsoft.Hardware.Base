@@ -9,8 +9,8 @@ import LayoutMenuItem from '../components/layout/LayoutMenuItem';
 
 const ProjectMenu: FC = () => (
   <List>
-    <LayoutMenuItem icon={LightbulbIcon} label="LED Example" to={`/${PROJECT_PATH}/led-example`} />
-    <LayoutMenuItem icon={SerialPortIcon} label="Serial Monitor" to={`/${PROJECT_PATH}/serial`} />
+    <LayoutMenuItem icon={LightbulbIcon} label="LED" to={`/${PROJECT_PATH}/led-example`} />
+    <LayoutMenuItem icon={SerialPortIcon} label="Serial" to={`/${PROJECT_PATH}/serial`} />
   </List>
 );
 

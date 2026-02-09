@@ -3,7 +3,7 @@ import { Typography, List, ListItem, ListItemText } from '@mui/material';
 import { SectionContent } from '../../components';
 
 const SerialInfo: FC = () => (
-  <SectionContent title='Serial Monitor' titleGutter>
+  <SectionContent title='Serial' titleGutter>
     <Typography variant="body1" paragraph>
       This service monitors Serial2 (GPIO16/17 on ESP32) and streams the data
       across all communication channels in real-time.
