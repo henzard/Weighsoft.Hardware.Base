@@ -488,9 +488,9 @@ Get enabled feature flags.
 
 ### Demo Project Endpoints
 
-#### GET /rest/lightState
+#### GET /rest/ledExample
 
-Get light state.
+Get LED state.
 
 **Security**: IS_AUTHENTICATED
 
@@ -501,9 +501,9 @@ Get light state.
 }
 ```
 
-#### POST /rest/lightState
+#### POST /rest/ledExample
 
-Update light state.
+Update LED state.
 
 **Security**: IS_AUTHENTICATED
 
@@ -515,6 +515,26 @@ Update light state.
 ```
 
 **Response** (200 OK): Same as GET response
+
+#### GET /rest/serial
+
+Get last received serial line.
+
+**Security**: IS_AUTHENTICATED
+
+**Response** (200 OK):
+```json
+{
+  "last_line": "Sensor reading: 23.5°C",
+  "timestamp": 12345678
+}
+```
+
+**Field Descriptions**:
+- `last_line`: Most recently received complete line from Serial2
+- `timestamp`: ESP32 millis() when line was received
+
+**Note**: This is read-only. Serial data flows from hardware only.
 
 #### GET /rest/brokerSettings
 
@@ -570,13 +590,36 @@ Update MQTT topic configuration.
 
 ### WebSocket Endpoints
 
-#### /ws/lightState
+#### /ws/ledExample
 
-Real-time light state synchronization.
+Real-time LED state synchronization.
 
 **Security**: IS_AUTHENTICATED
 
 **Payload Format**:
+```json
+{
+  "led_on": true
+}
+```
+
+**Behavior**: Bidirectional - changes from any source (REST, MQTT, BLE, WebSocket) are broadcast to all WebSocket clients.
+
+#### /ws/serial
+
+Real-time serial data streaming.
+
+**Security**: IS_AUTHENTICATED
+
+**Payload Format**:
+```json
+{
+  "last_line": "GPS: 37.7749,-122.4194",
+  "timestamp": 12345678
+}
+```
+
+**Behavior**: Server → Client only. New lines from Serial2 are automatically pushed to all connected clients.
 ```json
 {
   "led_on": true
@@ -594,14 +637,29 @@ Real-time light state synchronization.
 
 ### Topic Structure
 
-Projects define their own MQTT topic structure. The demo project uses:
+Projects define their own MQTT topic structure. The framework provides two example patterns:
 
-**Base Path**: Configured in `/rest/brokerSettings`
+#### LED Example Topics (Bidirectional)
+
+**Base Path**: Configured in project settings (e.g., `homeassistant/light/{unique_id}`)
 
 **Topics**:
 - `{mqtt_path}/config` - Home Assistant discovery
 - `{mqtt_path}/state` - Device publishes state updates
 - `{mqtt_path}/set` - Device subscribes to commands
+
+#### Serial Example Topics (Publish-Only)
+
+**Base Path**: `weighsoft/serial/{unique_id}`
+
+**Topics**:
+- `weighsoft/serial/{unique_id}/data` - Device publishes serial lines
+
+**Example**:
+```
+Topic: weighsoft/serial/a4e57cdb7928/data
+Payload: {"last_line":"GPS: 37.7749,-122.4194","timestamp":12345678}
+```
 
 ### Home Assistant Discovery
 
@@ -654,6 +712,47 @@ Projects define their own MQTT topic structure. The demo project uses:
 **QoS**: 2 (exactly once)
 
 **Response**: Device publishes updated state to state topic
+
+## BLE Characteristics
+
+When BLE is enabled (`FT_BLE=1`), services expose characteristics for wireless communication.
+
+### LED Example BLE Service
+
+**Service UUID**: `19b10000-e8f2-537e-4f6c-d104768a1214`
+
+**Characteristic UUID**: `19b10001-e8f2-537e-4f6c-d104768a1214`
+
+**Properties**: READ | WRITE | NOTIFY
+
+**Value Format**: UTF-8 JSON string
+```json
+{"led_on":true}
+```
+
+**Usage**:
+- READ: Get current LED state
+- WRITE: Change LED state (triggers notifications to all subscribers)
+- NOTIFY: Receive updates when state changes from any source
+
+### Serial Example BLE Service
+
+**Service UUID**: `12340000-e8f2-537e-4f6c-d104768a1234`
+
+**Characteristic UUID**: `12340001-e8f2-537e-4f6c-d104768a1234`
+
+**Properties**: READ | NOTIFY
+
+**Value Format**: UTF-8 JSON string
+```json
+{"last_line":"Sensor: 23.5C","timestamp":12345678}
+```
+
+**Usage**:
+- READ: Get last received serial line
+- NOTIFY: Receive updates as new lines arrive from Serial2
+
+**Note**: Read-only - no WRITE property (data flows from hardware only)
 
 ## HTTP Status Codes
 

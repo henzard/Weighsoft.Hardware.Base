@@ -53,6 +53,8 @@ This documentation provides comprehensive architecture, design patterns, API ref
 | Document | Description |
 |----------|-------------|
 | [EXTENSION-GUIDE.md](EXTENSION-GUIDE.md) | Step-by-step guide to add custom features |
+| [LED-EXAMPLE.md](LED-EXAMPLE.md) | LED control example project - template for new services |
+| [SERIAL-EXAMPLE.md](SERIAL-EXAMPLE.md) | Serial monitoring example - line-based data streaming |
 
 ## Learning Paths
 
@@ -223,7 +225,9 @@ When adding new features:
 
 - **Main README**: [../README.md](../README.md) - Project overview
 - **Framework Source**: `lib/framework/` - Implementation reference
-- **Demo Project**: `src/Light*` - Working example
+- **Example Projects**: 
+  - [LED-EXAMPLE.md](LED-EXAMPLE.md) - Simple LED control
+  - [SERIAL-EXAMPLE.md](SERIAL-EXAMPLE.md) - Serial port monitoring
 
 ## Feedback
 

@@ -27,9 +27,15 @@ C:\Project\Weighsoft.Hardware.Base\
 ├── scripts\                   # Build scripts
 │   └── build_interface.py     # Interface build automation
 └── src\                       # Main application code
-    ├── main.cpp               # Entry point
-    ├── LightStateService.*    # Demo: Light control
-    └── LightMqttSettingsService.*  # Demo: MQTT config
+    ├── main.cpp               # Entry point, service initialization
+    └── examples\              # Example projects
+        ├── led\               # LED Example: Bidirectional control
+        │   ├── LedExampleService.h
+        │   └── LedExampleService.cpp
+        └── serial\            # Serial Example: Data streaming
+            ├── SerialState.h
+            ├── SerialService.h
+            └── SerialService.cpp
 ```
 
 ## Backend Structure (C++)
@@ -70,17 +76,22 @@ C:\Project\Weighsoft.Hardware.Base\
 
 ### /src/ - Application Code
 
-**Purpose**: Main application and custom services
+**Purpose**: Main application and example projects
 
 **Files**:
 
 | File | Purpose |
 |------|---------|
-| `main.cpp` | Entry point, setup(), loop() |
-| `LightStateService.h/cpp` | Demo: LED control service |
-| `LightMqttSettingsService.h/cpp` | Demo: MQTT topic configuration |
+| `main.cpp` | Entry point, setup(), loop(), service initialization |
 
-**Pattern**: Add your custom services here
+**Example Projects**:
+
+| Directory | Files | Purpose |
+|-----------|-------|---------|
+| `examples/led/` | `LedExampleService.h/cpp` | LED control with 4 channels (REST, WS, MQTT, BLE) |
+| `examples/serial/` | `SerialState.h`, `SerialService.h/cpp` | Serial2 monitoring and streaming |
+
+**Pattern**: Create your custom services in `examples/yourdevice/`
 
 ### Configuration Files
 
@@ -170,16 +181,43 @@ C:\Project\Weighsoft.Hardware.Base\
 |------|---------|
 | `ProjectRouting.tsx` | Custom feature routing |
 | `ProjectMenu.tsx` | Custom menu items |
-| `DemoProject.tsx` | Demo tabs |
-| `DemoInformation.tsx` | Demo documentation |
-| `LightStateRestForm.tsx` | REST example |
-| `LightStateWebSocketForm.tsx` | WebSocket example |
-| `LightMqttSettingsForm.tsx` | MQTT config example |
-| `api.ts` | Custom API endpoints |
+
+### /interface/src/examples/ - Example Projects
+
+**LED Example** (`examples/led/`):
+
+| File | Purpose |
+|------|---------|
+| `LedExample.tsx` | Main router with tabs |
+| `LedExampleInfo.tsx` | Documentation and wiring |
+| `LedControlRest.tsx` | REST control form |
+| `LedControlWebSocket.tsx` | WebSocket real-time control |
+| `LedControlBle.tsx` | BLE connection instructions |
+| `api.ts` | LED API endpoints |
 | `types.ts` | TypeScript types |
-| `validators.ts` | Form validation |
+
+**Serial Example** (`examples/serial/`):
+
+| File | Purpose |
+|------|---------|
+| `SerialMonitor.tsx` | Main router with tabs |
+| `SerialInfo.tsx` | Documentation and hardware setup |
+| `SerialRest.tsx` | REST polling view |
+| `SerialWebSocket.tsx` | Real-time streaming view |
+| `SerialBle.tsx` | BLE connection instructions |
+
+### /interface/src/api/ - API Layer
+
+| File | Purpose |
+|------|---------|
+| `endpoints.ts` | Base URLs and WebSocket paths |
+| `serial.ts` | Serial example API functions |
 
 ### /interface/src/types/ - TypeScript Types
+
+| File | Purpose |
+|------|---------|
+| `serial.ts` | Serial data types |
 
 | File | Purpose |
 |------|---------|

@@ -2,21 +2,44 @@
 
 ## Overview
 
-This guide shows you how to extend the Weighsoft Hardware framework by creating custom services. We recommend starting with the **LED Example Project** as a template, then following the single-layer architecture pattern for your own services.
+This guide shows you how to extend the Weighsoft Hardware framework by creating custom services. We provide two reference examples to use as templates:
 
-## Quick Start: LED Example as Template
+- **LED Example** (`src/examples/led/`) - Demonstrates bidirectional control with 4 communication channels
+- **Serial Example** (`src/examples/serial/`) - Demonstrates read-only data streaming from hardware
 
-The **LED Example Project** (`src/examples/led/` and `interface/src/examples/led/`) demonstrates the recommended single-layer architecture pattern with:
+Both follow the single-layer architecture pattern for clean, maintainable code.
 
-- **Four communication channels**: REST, WebSocket, MQTT, BLE (Phase 2)
+## Quick Start: Choose Your Template
+
+### LED Example - For Controllable Devices
+
+The **LED Example Project** (`src/examples/led/` and `interface/src/examples/led/`) demonstrates:
+
+- **Bidirectional communication**: Control and status feedback
+- **Four communication channels**: REST, WebSocket, MQTT, BLE
 - **Inline protocol configuration**: No separate settings services
 - **Multi-channel synchronization**: Automatic state broadcast with origin tracking
 - **Complete UI**: React components for all control methods
 
-**When to Use the LED Example**:
-- Building services for industrial devices (scales, relays, sensors, displays)
-- Need multiple communication protocols without complex configuration
-- Want a simple, maintainable pattern
+**Use LED Example as template for**:
+- Controllable devices (relays, motors, actuators)
+- Bidirectional state (read + write)
+- Device configuration interfaces
+
+### Serial Example - For Data Sources
+
+The **Serial Example Project** (`src/examples/serial/` and `interface/src/examples/serial/`) demonstrates:
+
+- **Read-only streaming**: Data flows from hardware → channels
+- **Line-based parsing**: Handles newline-delimited text data
+- **Four channels**: REST (polling), WebSocket (streaming), MQTT (pub), BLE (notify)
+- **Real-time UI**: Auto-scrolling log view with timestamps
+- **Complete documentation**: Hardware wiring, use cases, troubleshooting
+
+**Use Serial Example as template for**:
+- Sensors and data sources (GPS, temperature, weight scales)
+- Read-only data streams
+- Log monitoring and data collection
 
 **See**: `docs/LED-EXAMPLE.md` for detailed walkthrough and `docs/DESIGN-PATTERNS.md` Pattern 11 for architecture.
 
@@ -47,12 +70,21 @@ class MyDeviceService : public StatefulService<MyDeviceState> {
 - Easy to add/remove protocols per device type
 - Origin tracking prevents feedback loops automatically
 
-**Copy the LED Example**:
+**Copy the LED or Serial Example**:
+
+For controllable devices (LED pattern):
 1. Copy `src/examples/led/` → `src/examples/mydevice/`
 2. Rename classes: `LedExampleService` → `MyDeviceService`
 3. Modify state struct to match your device
 4. Update MQTT topics and BLE UUIDs
 5. Implement device-specific hardware control
+
+For data sources (Serial pattern):
+1. Copy `src/examples/serial/` → `src/examples/mysensor/`
+2. Rename classes: `SerialService` → `MySensorService`
+3. Modify state struct for your data format
+4. Update data source (Serial2, SPI, I2C, etc.)
+5. Implement parsing logic for your protocol
 
 ## Complete Example: Temperature Sensor Service
 

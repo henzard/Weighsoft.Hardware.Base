@@ -105,7 +105,7 @@ Resource                         | Description
 -------------------------------- | ----------------------------------------------------------------------
 [interface/](interface)          | React based front end
 [lib/framework/](lib/framework)  | C++ back end for the ESP8266/ESP32 device
-[src/](src)                      | The main.cpp and demo project to get you started
+[src/](src)                      | The main.cpp and example projects (LED, Serial)
 [scripts/](scripts)              | Scripts that build the React interface as part of the platformio build
 [platformio.ini](platformio.ini) | PlatformIO project configuration file
 
@@ -413,6 +413,8 @@ For detailed architecture documentation, see:
 - [C4 Diagrams](docs/C4-CONTEXT.md)
 - [Design Patterns](docs/DESIGN-PATTERNS.md)
 - [API Reference](docs/API-REFERENCE.md)
+- [LED Example](docs/LED-EXAMPLE.md) - Simple LED control demo
+- [Serial Example](docs/SERIAL-EXAMPLE.md) - Serial port monitoring service
 
 ### Initializing the framework
 
