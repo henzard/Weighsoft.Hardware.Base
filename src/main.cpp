@@ -6,12 +6,13 @@
 
 AsyncWebServer server(80);
 ESP8266React esp8266React(&server);
-LightMqttSettingsService lightMqttSettingsService =
-    LightMqttSettingsService(&server, esp8266React.getFS(), esp8266React.getSecurityManager());
-LightStateService lightStateService = LightStateService(&server,
-                                                        esp8266React.getSecurityManager(),
-                                                        esp8266React.getMqttClient(),
-                                                        &lightMqttSettingsService);
+LightMqttSettingsService lightMqttSettingsService(
+    &server, esp8266React.getFS(), esp8266React.getSecurityManager());
+LightStateService lightStateService(
+    &server,
+    esp8266React.getSecurityManager(),
+    esp8266React.getMqttClient(),
+    &lightMqttSettingsService);
 
 void setup() {
   // start serial and filesystem
