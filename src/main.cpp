@@ -1,5 +1,6 @@
 #include <ESP8266React.h>
 #include <examples/led/LedExampleService.h>
+#include <examples/serial/SerialService.h>
 
 #define SERIAL_BAUD_RATE 115200
 
@@ -7,6 +8,7 @@
 AsyncWebServer* server;
 ESP8266React* esp8266React;
 LedExampleService* ledExampleService;
+SerialService* serialService;
 
 void setup() {
   // start serial and filesystem
@@ -45,28 +47,46 @@ void setup() {
   Serial.println(F("[4/6] LED example service created OK"));
 
 #if FT_ENABLED(FT_BLE)
-  // Register callback to configure BLE when server is ready
+  // Register callbacks to configure BLE when server is ready
   esp8266React->getBleSettingsService()->onBleServerStarted(
     [](BLEServer* bleServer) {
-      Serial.println(F("[LED] BLE server ready callback received"));
+      // LED callback
       if (ledExampleService) {
-        // Update the service's BLE server pointer
+        Serial.println(F("[LED] BLE server ready callback received"));
         ledExampleService->setBleServer(bleServer);
         ledExampleService->configureBle();
       }
+      // Serial callback
+      if (serialService) {
+        Serial.println(F("[Serial] BLE server ready callback received"));
+        serialService->setBleServer(bleServer);
+        serialService->configureBle();
+      }
     }
   );
-  Serial.println(F("[4/6] BLE callback registered OK"));
+  Serial.println(F("[4/5] BLE callbacks registered OK"));
 #endif
 
   // load the initial LED settings
   ledExampleService->begin();
-  Serial.println(F("[4/6] LED example loaded OK"));
+  Serial.println(F("[4/7] LED example loaded OK"));
 
-  Serial.println(F("[5/6] Starting web server..."));
+  Serial.println(F("[5/7] Initializing Serial monitor service..."));
+  serialService = new SerialService(
+      server,
+      esp8266React->getSecurityManager(),
+      esp8266React->getMqttClient()
+#if FT_ENABLED(FT_BLE)
+      ,nullptr  // BLE server will be configured via callback
+#endif
+      );
+  serialService->begin();
+  Serial.println(F("[5/7] Serial service loaded OK"));
+
+  Serial.println(F("[6/7] Starting web server..."));
   // start the server
   server->begin();
-  Serial.println(F("[5/6] Web server started OK"));
+  Serial.println(F("[6/7] Web server started OK"));
   
   Serial.println(F("=== System Ready! ==="));
   Serial.print(F("Free heap after init: "));
@@ -76,4 +96,7 @@ void setup() {
 void loop() {
   // run the framework's loop function
   esp8266React->loop();
+  
+  // read serial data
+  serialService->loop();
 }
