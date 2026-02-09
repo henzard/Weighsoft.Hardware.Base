@@ -1,5 +1,6 @@
 #include <ESP8266React.h>
 #include <examples/led/LedExampleService.h>
+#include <examples/display/DisplayService.h>
 
 #define SERIAL_BAUD_RATE 115200
 
@@ -7,6 +8,7 @@
 AsyncWebServer* server;
 ESP8266React* esp8266React;
 LedExampleService* ledExampleService;
+DisplayService* displayService;
 
 void setup() {
   // start serial and filesystem
@@ -44,6 +46,17 @@ void setup() {
       );
   Serial.println(F("[4/6] LED example service created OK"));
 
+  Serial.println(F("[4/6] Initializing Display service..."));
+  displayService = new DisplayService(
+      server,
+      esp8266React->getSecurityManager(),
+      esp8266React->getMqttClient()
+#if FT_ENABLED(FT_BLE)
+      ,nullptr  // BLE server will be configured via callback
+#endif
+      );
+  Serial.println(F("[4/6] Display service created OK"));
+
 #if FT_ENABLED(FT_BLE)
   // Register callback to configure BLE when server is ready
   esp8266React->getBleSettingsService()->onBleServerStarted(
@@ -54,6 +67,12 @@ void setup() {
         ledExampleService->setBleServer(bleServer);
         ledExampleService->configureBle();
       }
+      Serial.println(F("[Display] BLE server ready callback received"));
+      if (displayService) {
+        // Update the service's BLE server pointer
+        displayService->setBleServer(bleServer);
+        displayService->configureBle();
+      }
     }
   );
   Serial.println(F("[4/6] BLE callback registered OK"));
@@ -62,6 +81,10 @@ void setup() {
   // load the initial LED settings
   ledExampleService->begin();
   Serial.println(F("[4/6] LED example loaded OK"));
+
+  // load the initial Display settings
+  displayService->begin();
+  Serial.println(F("[4/6] Display loaded OK"));
 
   Serial.println(F("[5/6] Starting web server..."));
   // start the server
