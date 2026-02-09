@@ -1,0 +1,237 @@
+---
+description: Manage compile-time feature flags in features.ini and Features.h
+alwaysApply: false
+globs: ["features.ini", "lib/framework/Features.h", "lib/framework/ESP8266React.{cpp,h}"]
+---
+
+# Feature Flag Management Rule
+
+Guide for managing compile-time feature flags that control framework features.
+
+## Core Principle
+
+**Use feature flags for large optional framework features, not every small feature.**
+
+Feature flags = Compile-time switches for substantial framework components.
+
+## Existing Feature Flags
+
+Reference: @features.ini
+
+Current framework flags:
+- `FT_PROJECT` (0) - Project demo code
+- `FT_SECURITY` (1) - Authentication and authorization
+- `FT_MQTT` (1) - MQTT client integration
+- `FT_NTP` (1) - Network Time Protocol
+- `FT_OTA` (1) - Over-the-air updates
+- `FT_UPLOAD_FIRMWARE` (0) - Firmware upload via web UI
+
+## When to Add Feature Flags
+
+### ✅ DO Add Feature Flags For:
+
+**Large optional framework features:**
+- New communication protocols (like MQTT, CoAP)
+- Major infrastructure services (like NTP, OTA)
+- Significant security modules
+- Optional hardware support
+
+**Features with significant binary size impact:**
+- Large libraries (>50KB)
+- Multiple services as a unit
+- Heavy protocol implementations
+
+**Platform-specific major features:**
+- Bluetooth (ESP32 only)
+- Camera support
+- Display drivers
+
+### ❌ DON'T Add Feature Flags For:
+
+**Individual application services:**
+- Single sensor services
+- Individual control services
+- Small custom features
+
+**Runtime configuration:**
+- Use `StatefulService` with `FSPersistence` instead
+- Settings should be configurable without recompilation
+
+**Minor functionality:**
+- Small helper functions
+- UI tweaks
+- Single endpoints
+
+## How to Add a Feature Flag
+
+Reference implementation: @lib/framework/Features.h and @lib/framework/ESP8266React.cpp
+
+### Step 1: Add to features.ini
+
+```ini
+[features]
+build_flags = 
+  -D FT_YOUR_FEATURE=1
+```
+
+### Step 2: Add to lib/framework/Features.h
+
+```cpp
+#ifndef FT_YOUR_FEATURE
+#define FT_YOUR_FEATURE 1
+#endif
+```
+
+Pattern: Provide default value, allow override from build flags.
+
+### Step 3: Wrap Dependent Code
+
+Use `FT_ENABLED()` macro (from @lib/framework/Features.h):
+
+```cpp
+#if FT_ENABLED(FT_YOUR_FEATURE)
+  // Feature-specific code
+  _yourFeatureService(server, &ESPFS, &_securitySettingsService),
+#endif
+```
+
+### Step 4: Update Constructor Initialization
+
+In @lib/framework/ESP8266React.cpp constructor:
+
+```cpp
+ESP8266React::ESP8266React(AsyncWebServer* server) :
+    // ... other services
+#if FT_ENABLED(FT_YOUR_FEATURE)
+    _yourFeatureService(server, &ESPFS, &_securitySettingsService),
+#endif
+    // ... remaining services
+```
+
+**Important:** Watch for trailing commas in initialization lists.
+
+### Step 5: Update begin() Method
+
+```cpp
+void ESP8266React::begin() {
+  // ... other begin() calls
+#if FT_ENABLED(FT_YOUR_FEATURE)
+  _yourFeatureService.begin();
+#endif
+}
+```
+
+### Step 6: Document in Configuration
+
+Update @docs/CONFIGURATION.md with:
+- Flag name and purpose
+- Default value
+- Binary size impact
+- Dependencies
+
+## Usage Patterns
+
+### Pattern 1: Service Composition (from @lib/framework/ESP8266React.cpp)
+
+```cpp
+#if FT_ENABLED(FT_MQTT)
+  _mqttSettingsService(server, &ESPFS, &_securitySettingsService),
+  _mqttStatus(server, &_mqttSettingsService, &_securitySettingsService),
+#endif
+```
+
+### Pattern 2: Include Guards
+
+```cpp
+#if FT_ENABLED(FT_SECURITY)
+// SecuritySettingsService.h content
+class SecuritySettingsService : public StatefulService<SecuritySettings> {
+  // ...
+};
+#endif
+```
+
+### Pattern 3: Conditional Compilation in Source
+
+```cpp
+#include <SecurityManager.h>
+
+#if FT_ENABLED(FT_SECURITY)
+void SecurityManager::authenticate(/* ... */) {
+  // Implementation
+}
+#endif
+```
+
+## Feature Flag vs Settings Service
+
+### Use Feature Flag When:
+- Removing feature saves significant binary size
+- Feature requires compile-time dependencies
+- Feature is platform-specific
+- Feature is rarely changed
+
+### Use Settings Service When:
+- Feature should be user-configurable
+- No significant binary size impact
+- Runtime enable/disable makes sense
+- User needs flexibility
+
+**Example:**
+- ❌ Feature flag for "enable LED" - Use settings service
+- ✅ Feature flag for MQTT protocol - Binary size impact
+- ❌ Feature flag for WiFi SSID - Runtime config needed
+- ✅ Feature flag for Bluetooth stack - ESP32 only, large
+
+## What NOT to Do
+
+❌ **Add flags for every service:**
+```cpp
+// Wrong: Too granular
+#define FT_LIGHT_SERVICE 1
+#define FT_SENSOR_SERVICE 1
+#define FT_RELAY_SERVICE 1
+```
+
+❌ **Nest feature flags deeply:**
+```cpp
+// Wrong: Complex nesting
+#if FT_ENABLED(FT_MQTT)
+  #if FT_ENABLED(FT_SECURITY)
+    #if FT_ENABLED(FT_NTP)
+      // Too complex
+    #endif
+  #endif
+#endif
+```
+
+❌ **Use for runtime configuration:**
+```cpp
+// Wrong: Should be in settings
+#define WIFI_SSID "MyNetwork"  // Use WiFiSettingsService instead
+```
+
+❌ **Forget to update documentation:**
+```cpp
+// Wrong: New flag not documented in @docs/CONFIGURATION.md
+```
+
+## Checklist for Adding Feature Flag
+
+- [ ] Feature is large/optional framework component
+- [ ] Significant binary size impact
+- [ ] Added to `features.ini`
+- [ ] Added to `lib/framework/Features.h`
+- [ ] Code wrapped with `#if FT_ENABLED(FT_YOUR_FEATURE)`
+- [ ] Constructor initialization list updated
+- [ ] `begin()` method updated
+- [ ] Documented in @docs/CONFIGURATION.md
+- [ ] Tested with flag enabled and disabled
+- [ ] Verified binary size difference
+
+## References
+
+- Feature definitions: @lib/framework/Features.h
+- Configuration: @features.ini
+- Usage example: @lib/framework/ESP8266React.cpp
+- Documentation: @docs/CONFIGURATION.md

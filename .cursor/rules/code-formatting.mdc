@@ -1,0 +1,255 @@
+---
+description: Use automated formatters - do not manually format code
+alwaysApply: true
+---
+
+# Code Formatting Rule
+
+**ALWAYS use automated formatters. NEVER manually format code or document style rules.**
+
+## Core Principle
+
+Let tools handle formatting. Focus on logic, not spaces.
+
+Following best practice: "Use a linter instead of copying style guides. Agent already knows common style conventions."
+
+## C++ Formatting
+
+### Tool: clang-format
+
+Configuration: @.clang-format
+
+**Settings:**
+- Based on Google style
+- 120 character line limit
+- No short blocks/functions/ifs/loops on single lines
+- Constructor initializers: one per line
+
+### Format Before Commit
+
+```bash
+clang-format -i src/**/*.cpp src/**/*.h
+clang-format -i lib/framework/**/*.cpp lib/framework/**/*.h
+```
+
+### IDE Integration
+
+**VS Code:**
+1. Install extension: "C/C++" (Microsoft) or "clang-format" 
+2. Settings:
+   ```json
+   "editor.formatOnSave": true,
+   "C_Cpp.clang_format_style": "file"
+   ```
+
+**Cursor:**
+- Same as VS Code (Cursor uses VS Code extensions)
+- Format command: `Shift+Alt+F` (Windows) or `Shift+Option+F` (Mac)
+
+Reference: @.cursor/skills/update-cursor-settings for IDE configuration
+
+## TypeScript/React Formatting
+
+### Tool: ESLint
+
+Configuration: @interface/package.json in `eslintConfig` section
+
+**Key Rules Already Configured:**
+- 140 character line limit
+- Semicolons required
+- React JSX formatting rules
+- No trailing spaces
+- TypeScript shadow checking
+
+### Format Commands
+
+```bash
+cd interface
+npm run lint           # Check for issues
+npm run lint --fix     # Auto-fix (if script supports)
+```
+
+### IDE Integration
+
+**VS Code/Cursor:**
+1. Install extension: "ESLint"
+2. Settings:
+   ```json
+   "editor.formatOnSave": true,
+   "editor.codeActionsOnSave": {
+     "source.fixAll.eslint": true
+   }
+   ```
+
+## Formatting Workflow
+
+### Before Every Commit
+
+1. **Save all files** (triggers format-on-save if enabled)
+2. **Or manually format:**
+   - C++: `clang-format -i <file>`
+   - TypeScript: ESLint auto-fix
+
+### In Code Reviews
+
+✅ **DO discuss:**
+- Logic and algorithms
+- Architecture and patterns
+- Security concerns
+- Performance issues
+
+❌ **DON'T discuss:**
+- Spaces vs tabs
+- Line length
+- Brace placement
+- Indentation
+
+**If formatting is wrong:** Run the formatter, don't manually fix.
+
+## What NOT to Do
+
+❌ **Manually format code:**
+```cpp
+// Wrong: Manually adjusting spaces
+int    x  =   5;    // Manually aligned
+float  y =  3.14;   // Manually aligned
+```
+
+✅ **Let formatter handle it:**
+```cpp
+// Correct: Let clang-format decide
+int x = 5;
+float y = 3.14;
+```
+
+❌ **Copy style guide rules into code or rules:**
+```markdown
+# Wrong: Documenting every style rule
+- Use 2 spaces for indentation
+- Max line length 120 characters
+- Always use braces for if statements
+// This violates best practices - use linter instead
+```
+
+❌ **Override formatter without team agreement:**
+```cpp
+// Wrong: Adding clang-format off comments everywhere
+// clang-format off
+int x   = complicated_manual_formatting();
+// clang-format on
+```
+
+❌ **Commit unformatted code:**
+```bash
+# Wrong: Skipping format step
+git add .
+git commit -m "feat: add new service"  # Code not formatted
+```
+
+❌ **Debate style in pull requests:**
+```markdown
+# Wrong PR comment:
+"Can you change the line length here to 100 instead of 120?"
+# This should be in .clang-format if it matters
+```
+
+## Configuration Files
+
+### C++ Style: @.clang-format
+
+Don't copy content here. File contains:
+- Base style (Google)
+- Custom overrides
+- Project-specific settings
+
+To modify: Edit `.clang-format` file, discuss with team first.
+
+### TypeScript/React Style: @interface/package.json
+
+ESLint configuration in `eslintConfig` section.
+
+Don't copy content here. File contains:
+- Base configs (react-app)
+- Custom rules
+- Line length limits
+
+To modify: Edit `package.json`, discuss with team first.
+
+## Formatter Not Working?
+
+### C++ Issues
+
+**Check:**
+1. Is `.clang-format` in root directory?
+2. Is clang-format installed? `clang-format --version`
+3. Is VS Code extension installed?
+4. Is format-on-save enabled?
+
+**Fix:**
+```bash
+# Install clang-format (if missing)
+# Windows: Use LLVM installer
+# Mac: brew install clang-format
+# Linux: apt install clang-format
+```
+
+### TypeScript Issues
+
+**Check:**
+1. Is `eslintConfig` in `interface/package.json`?
+2. Are node_modules installed? `cd interface && npm install`
+3. Is ESLint extension installed in VS Code?
+
+**Fix:**
+```bash
+cd interface
+npm install  # Ensure dependencies installed
+```
+
+## Anti-Patterns
+
+❌ **Mixing formatted and unformatted code**
+❌ **Disabling formatter for large sections**
+❌ **Creating project-specific style guides in docs**
+❌ **Manual formatting in code reviews**
+❌ **Inconsistent formatting across files**
+
+## Best Practices
+
+✅ **Enable format-on-save in IDE**
+✅ **Format before committing**
+✅ **Let formatter make all style decisions**
+✅ **Keep configuration in tool config files**
+✅ **Trust the formatter, don't override**
+
+## Quick Reference
+
+**Format C++ file:**
+```bash
+clang-format -i path/to/file.cpp
+```
+
+**Format TypeScript file:**
+```bash
+cd interface && npx eslint --fix path/to/file.ts
+```
+
+**Check if file needs formatting:**
+```bash
+clang-format --dry-run path/to/file.cpp  # Shows diff if needed
+```
+
+## Why Automated Formatting?
+
+1. **Consistency:** Same style everywhere, automatically
+2. **No debates:** Tool decides, team focuses on logic
+3. **Faster reviews:** No time wasted on style comments
+4. **Less cognitive load:** Don't think about formatting
+5. **Best practice:** Follows industry standard approach
+
+## References
+
+- C++ formatter config: @.clang-format
+- TypeScript/ESLint config: @interface/package.json
+- IDE settings: @.cursor/skills/update-cursor-settings
+- **Don't document style rules** - they're in the config files
