@@ -11,6 +11,7 @@
 #include <ESPAsyncTCP.h>
 #endif
 
+#include <FeaturesService.h>
 #include <APSettingsService.h>
 #include <APStatus.h>
 #include <AuthenticationService.h>

@@ -1,5 +1,5 @@
 import { createContext, FC, useContext, useState, useEffect } from 'react';
-import { useAuthenticationContext } from '../authentication';
+import { AuthenticationContext } from '../authentication';
 import { ThemeApi } from '../../api/theme';
 
 type ThemeMode = 'light' | 'dark';
@@ -13,7 +13,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { me } = useAuthenticationContext();
+  const { me } = useContext(AuthenticationContext);
   const [mode, setMode] = useState<ThemeMode>(() => {
     // Initial: Check system preference
     if (window.matchMedia('(prefers-color-scheme: dark)').matches) {

@@ -55,7 +55,8 @@ const SecuritySettingsForm: FC = () => {
       setUser({
         username: "",
         password: "",
-        admin: true
+        admin: true,
+        theme_preference: "light"
       });
     };
 
