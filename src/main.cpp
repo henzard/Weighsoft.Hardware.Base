@@ -1,14 +1,12 @@
 #include <ESP8266React.h>
-#include <LightMqttSettingsService.h>
-#include <LightStateService.h>
+#include <examples/led/LedExampleService.h>
 
 #define SERIAL_BAUD_RATE 115200
 
 // Use pointers to avoid early construction issues on ESP32
 AsyncWebServer* server;
 ESP8266React* esp8266React;
-LightMqttSettingsService* lightMqttSettingsService;
-LightStateService* lightStateService;
+LedExampleService* ledExampleService;
 
 void setup() {
   // start serial and filesystem
@@ -35,31 +33,21 @@ void setup() {
   esp8266React->begin();
   Serial.println(F("[3/6] Framework initialized OK"));
 
-  Serial.println(F("[4/6] Initializing light MQTT service..."));
-  lightMqttSettingsService = new LightMqttSettingsService(
-      server, esp8266React->getFS(), esp8266React->getSecurityManager());
-  Serial.println(F("[4/6] Light MQTT service created OK"));
-  
-  Serial.println(F("[5/6] Initializing light state service..."));
-  lightStateService = new LightStateService(
+  Serial.println(F("[4/6] Initializing LED example service..."));
+  ledExampleService = new LedExampleService(
       server,
       esp8266React->getSecurityManager(),
-      esp8266React->getMqttClient(),
-      lightMqttSettingsService);
-  Serial.println(F("[5/6] Light state service created OK"));
+      esp8266React->getMqttClient());
+  Serial.println(F("[4/6] LED example service created OK"));
 
-  // load the initial light settings
-  lightStateService->begin();
-  Serial.println(F("[5/6] Light settings loaded OK"));
+  // load the initial LED settings
+  ledExampleService->begin();
+  Serial.println(F("[4/6] LED example loaded OK"));
 
-  // start the light service
-  lightMqttSettingsService->begin();
-  Serial.println(F("[5/6] MQTT settings loaded OK"));
-
-  Serial.println(F("[6/6] Starting web server..."));
+  Serial.println(F("[5/6] Starting web server..."));
   // start the server
   server->begin();
-  Serial.println(F("[6/6] Web server started OK"));
+  Serial.println(F("[5/6] Web server started OK"));
   
   Serial.println(F("=== System Ready! ==="));
   Serial.print(F("Free heap after init: "));

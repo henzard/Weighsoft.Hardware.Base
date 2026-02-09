@@ -1,19 +1,19 @@
 import { FC } from 'react';
 import { Navigate, Routes, Route } from 'react-router-dom';
 
-import DemoProject from './DemoProject';
+import LedExample from '../examples/led/LedExample';
 
 const ProjectRouting: FC = () => {
   return (
     <Routes>
       {
-        // Add the default route for your project below
+        // Default route for LED example project
       }
-      <Route path="/*" element={<Navigate to="demo/information" />} />
+      <Route path="/*" element={<Navigate to="led-example/information" />} />
       {
-        // Add your project page routes below.
+        // LED Example project routes
       }
-      <Route path="demo/*" element={<DemoProject />} />
+      <Route path="led-example/*" element={<LedExample />} />
     </Routes>
   );
 };

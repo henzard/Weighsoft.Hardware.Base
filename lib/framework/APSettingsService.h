@@ -131,7 +131,6 @@ class APSettingsService : public StatefulService<APSettings> {
 
   // for the captive portal
   DNSServer* _dnsServer;
-  bool _dnsServerRunning;
 
   // for the mangement delay loop
   volatile unsigned long _lastManaged;

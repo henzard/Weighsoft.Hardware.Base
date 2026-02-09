@@ -3,16 +3,16 @@ import { FC } from 'react';
 import { Button, Checkbox } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 
-import { SectionContent, FormLoader, BlockFormControlLabel, ButtonRow, MessageBox } from '../components';
-import { updateValue, useRest } from '../utils';
+import { SectionContent, FormLoader, BlockFormControlLabel, ButtonRow, MessageBox } from '../../components';
+import { updateValue, useRest } from '../../utils';
 
-import * as DemoApi from './api';
-import { LightState } from './types';
+import * as LedApi from './api';
+import { LedExampleState } from './types';
 
-const LightStateRestForm: FC = () => {
+const LedControlRest: FC = () => {
   const {
     loadData, saveData, saving, setData, data, errorMessage
-  } = useRest<LightState>({ read: DemoApi.readLightState, update: DemoApi.updateLightState });
+  } = useRest<LedExampleState>({ read: LedApi.readLedState, update: LedApi.updateLedState });
 
   const updateFormValue = updateValue(setData);
 
@@ -25,7 +25,7 @@ const LightStateRestForm: FC = () => {
       <>
         <MessageBox
           level="info"
-          message="The form below controls the LED via the RESTful service exposed by the ESP device."
+          message="Control the LED via REST API. Changes require clicking Save."
           my={2}
         />
         <BlockFormControlLabel
@@ -38,7 +38,7 @@ const LightStateRestForm: FC = () => {
               color="primary"
             />
           }
-          label="LED State?"
+          label="LED On?"
         />
         <ButtonRow mt={1}>
           <Button startIcon={<SaveIcon />} disabled={saving} variant="contained" color="primary" type="submit" onClick={saveData}>
@@ -50,10 +50,10 @@ const LightStateRestForm: FC = () => {
   };
 
   return (
-    <SectionContent title='REST Example' titleGutter>
+    <SectionContent title='REST Control' titleGutter>
       {content()}
     </SectionContent>
   );
 };
 
-export default LightStateRestForm;
+export default LedControlRest;

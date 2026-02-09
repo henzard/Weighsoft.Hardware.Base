@@ -469,6 +469,171 @@ const SignInPage: FC = () => {
 - Automatic redirects
 - Clean route definitions
 
+## Pattern 11: Single-Layer Protocol Integration
+
+**Intent**: Simplify multi-protocol services by composing framework components directly without separate settings services.
+
+**When to Use**:
+- Building application-specific services (scale, relay, display, sensors)
+- Need multiple communication channels (REST, WebSocket, MQTT, BLE)
+- Want to minimize tech debt and simplify maintenance
+- Industrial/commercial products with one primary function per device
+
+**Problem**: The two-layer pattern (framework service + application-specific settings service) adds unnecessary complexity for most industrial IoT devices that have focused functionality.
+
+**Solution**: Application services directly compose framework components and manage protocol-specific configuration inline.
+
+**Structure**:
+```cpp
+class LedExampleService : public StatefulService<LedExampleState> {
+  HttpEndpoint<LedExampleState> _httpEndpoint;
+  WebSocketTxRx<LedExampleState> _webSocket;
+  MqttPubSub<LedExampleState> _mqttPubSub;
+  AsyncMqttClient* _mqttClient;
+  
+  // Inline protocol configuration
+  String _mqttBasePath;
+  String _mqttName;
+  String _mqttUniqueId;
+  
+  void configureMqtt();
+  void onConfigUpdated();
+};
+```
+
+**Implementation Example**:
+```cpp
+LedExampleService::LedExampleService(
+    AsyncWebServer* server,
+    SecurityManager* securityManager,
+    AsyncMqttClient* mqttClient
+) :
+    _httpEndpoint(LedExampleState::read, LedExampleState::update, this, server,
+                  "/rest/ledExample", securityManager,
+                  AuthenticationPredicates::IS_AUTHENTICATED),
+    _mqttPubSub(LedExampleState::haRead, LedExampleState::haUpdate, this, mqttClient),
+    _webSocket(LedExampleState::read, LedExampleState::update, this, server,
+               "/ws/ledExample", securityManager,
+               AuthenticationPredicates::IS_AUTHENTICATED),
+    _mqttClient(mqttClient)
+{
+  // Inline MQTT configuration using SettingValue placeholders
+  _mqttBasePath = SettingValue::format("homeassistant/light/#{unique_id}");
+  _mqttName = SettingValue::format("led-example-#{unique_id}");
+  _mqttUniqueId = SettingValue::format("led-#{unique_id}");
+  
+  pinMode(LED_PIN, OUTPUT);
+  
+  // Configure MQTT callback
+  _mqttClient->onConnect(std::bind(&LedExampleService::configureMqtt, this));
+  
+  // Configure update handler for ALL channels
+  // Origin tracking automatically prevents feedback loops
+  addUpdateHandler([&](const String& originId) { onConfigUpdated(); }, false);
+}
+
+void LedExampleService::configureMqtt() {
+  if (!_mqttClient->connected()) return;
+  
+  String configTopic = _mqttBasePath + "/config";
+  String subTopic = _mqttBasePath + "/set";
+  String pubTopic = _mqttBasePath + "/state";
+
+  _mqttPubSub.configureTopics(pubTopic, subTopic);
+  
+  // Home Assistant auto-discovery
+  DynamicJsonDocument doc(256);
+  doc["~"] = _mqttBasePath;
+  doc["name"] = _mqttName;
+  doc["unique_id"] = _mqttUniqueId;
+  doc["cmd_t"] = "~/set";
+  doc["stat_t"] = "~/state";
+  doc["schema"] = "json";
+  
+  String payload;
+  serializeJson(doc, payload);
+  _mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
+}
+
+void LedExampleService::onConfigUpdated() {
+  digitalWrite(LED_PIN, _state.ledOn ? LED_ON : LED_OFF);
+}
+```
+
+**Multi-Channel Synchronization**:
+
+The single update handler broadcasts changes across all channels while origin tracking prevents loops:
+
+```cpp
+// In main.cpp
+ledExampleService = new LedExampleService(
+    server,
+    esp8266React->getSecurityManager(),
+    esp8266React->getMqttClient()
+);
+```
+
+When a user changes LED state via WebSocket:
+1. `WebSocketTxRx` calls `StatefulService::update(json, WS_ORIGIN_ID)`
+2. State changes, `callUpdateHandlers(WS_ORIGIN_ID)` is invoked
+3. Update handler calls `onConfigUpdated()` (updates hardware)
+4. `MqttPubSub` checks `originId != MQTT_ORIGIN_ID`, publishes to MQTT
+5. `WebSocketTxRx` checks `originId == WS_ORIGIN_ID`, skips broadcast (originator)
+6. `HttpEndpoint` not notified (REST is request/response only)
+
+**BLE Integration (Phase 2)**:
+
+When adding BLE, follow the same pattern:
+
+```cpp
+class LedExampleService : public StatefulService<LedExampleState> {
+  HttpEndpoint<LedExampleState> _httpEndpoint;
+  WebSocketTxRx<LedExampleState> _webSocket;
+  MqttPubSub<LedExampleState> _mqttPubSub;
+  BlePubSub<LedExampleState> _blePubSub;  // Add BLE component
+  AsyncMqttClient* _mqttClient;
+  BLEServer* _bleServer;
+  
+  // Inline BLE configuration
+  String _bleServiceUuid;
+  String _bleCharacteristicUuid;
+};
+```
+
+**Benefits**:
+- **Simplicity**: One service class, inline configuration
+- **Maintainability**: No separate settings services to sync
+- **Clarity**: All protocol config in one place
+- **Flexibility**: Easy to add/remove protocols per device type
+- **Scale**: Pattern works for serial devices, relays, displays, sensors
+
+**When Not to Use**:
+- User needs runtime configuration of protocol parameters (topics, UUIDs) - rare in industrial devices
+- Multiple independent applications need to share the same protocol settings
+- Protocol configuration is complex and benefits from dedicated UI
+
+**Comparison**:
+
+**Two-Layer (OLD - Complex)**:
+```
+MqttSettingsService → manages topics, settings UI, persistence
+LedMqttSettingsService → demo-specific MQTT settings
+LedStateService → depends on LedMqttSettingsService
+```
+
+**Single-Layer (NEW - Simple)**:
+```
+LedExampleService → inline topics, direct MQTT client composition
+```
+
+**Related Patterns**:
+- Pattern 2: Service Composition (compose framework components)
+- Pattern 5: Origin Tracking (prevent feedback loops)
+
+**Examples**:
+- `src/examples/led/LedExampleService.cpp` - Complete working example
+- `docs/LED-EXAMPLE.md` - Detailed implementation guide
+
 ## Anti-Patterns to Avoid
 
 ### 1. Direct State Access

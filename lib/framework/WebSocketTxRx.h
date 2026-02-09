@@ -25,6 +25,7 @@ class WebSocketConnector {
                      AuthenticationPredicate authenticationPredicate,
                      size_t bufferSize) :
       _statefulService(statefulService), _server(server), _webSocket(webSocketPath), _bufferSize(bufferSize) {
+    Serial.printf("[WS] Registering secured WebSocket at: %s\n", webSocketPath);
     _webSocket.setFilter(securityManager->filterRequest(authenticationPredicate));
     _webSocket.onEvent(std::bind(&WebSocketConnector::onWSEvent,
                                  this,
@@ -67,6 +68,7 @@ class WebSocketConnector {
 
  private:
   void forbidden(AsyncWebServerRequest* request) {
+    Serial.printf("[WS] Forbidden request to: %s\n", request->url().c_str());
     request->send(403);
   }
 };
@@ -110,9 +112,14 @@ class WebSocketTx : virtual public WebSocketConnector<T> {
                          uint8_t* data,
                          size_t len) {
     if (type == WS_EVT_CONNECT) {
+      Serial.printf("[WS] Client connected: %u\n", client->id());
       // when a client connects, we transmit it's id and the current payload
       transmitId(client);
       transmitData(client, WEB_SOCKET_ORIGIN);
+    } else if (type == WS_EVT_DISCONNECT) {
+      Serial.printf("[WS] Client disconnected: %u\n", client->id());
+    } else if (type == WS_EVT_ERROR) {
+      Serial.printf("[WS] Client error: %u\n", client->id());
     }
   }
 
@@ -125,10 +132,12 @@ class WebSocketTx : virtual public WebSocketConnector<T> {
     root["type"] = "id";
     root["id"] = WebSocketConnector<T>::clientId(client);
     size_t len = measureJson(jsonDocument);
-    AsyncWebSocketMessageBuffer* buffer = WebSocketConnector<T>::_webSocket.makeBuffer(len);
+    // Allocate len+1 so serializeJson can write the null terminator safely,
+    // but only send len bytes (the actual JSON, without the null)
+    AsyncWebSocketMessageBuffer* buffer = WebSocketConnector<T>::_webSocket.makeBuffer(len + 1);
     if (buffer) {
       serializeJson(jsonDocument, (char*)buffer->get(), len + 1);
-      client->text(buffer);
+      client->text((char*)buffer->get(), len);
     }
   }
 
@@ -148,13 +157,15 @@ class WebSocketTx : virtual public WebSocketConnector<T> {
     WebSocketConnector<T>::_statefulService->read(payload, _stateReader);
 
     size_t len = measureJson(jsonDocument);
-    AsyncWebSocketMessageBuffer* buffer = WebSocketConnector<T>::_webSocket.makeBuffer(len);
+    // Allocate len+1 so serializeJson can write the null terminator safely,
+    // but only send len bytes (the actual JSON, without the null)
+    AsyncWebSocketMessageBuffer* buffer = WebSocketConnector<T>::_webSocket.makeBuffer(len + 1);
     if (buffer) {
       serializeJson(jsonDocument, (char*)buffer->get(), len + 1);
       if (client) {
-        client->text(buffer);
+        client->text((char*)buffer->get(), len);
       } else {
-        WebSocketConnector<T>::_webSocket.textAll(buffer);
+        WebSocketConnector<T>::_webSocket.textAll((char*)buffer->get(), len);
       }
     }
   }

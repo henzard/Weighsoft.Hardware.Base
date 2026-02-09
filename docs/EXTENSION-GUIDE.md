@@ -2,7 +2,57 @@
 
 ## Overview
 
-This guide shows you how to extend the ESP8266-React framework by adding a complete custom feature. We'll build a **Temperature Sensor Service** as a practical example.
+This guide shows you how to extend the Weighsoft Hardware framework by creating custom services. We recommend starting with the **LED Example Project** as a template, then following the single-layer architecture pattern for your own services.
+
+## Quick Start: LED Example as Template
+
+The **LED Example Project** (`src/examples/led/` and `interface/src/examples/led/`) demonstrates the recommended single-layer architecture pattern with:
+
+- **Four communication channels**: REST, WebSocket, MQTT, BLE (Phase 2)
+- **Inline protocol configuration**: No separate settings services
+- **Multi-channel synchronization**: Automatic state broadcast with origin tracking
+- **Complete UI**: React components for all control methods
+
+**When to Use the LED Example**:
+- Building services for industrial devices (scales, relays, sensors, displays)
+- Need multiple communication protocols without complex configuration
+- Want a simple, maintainable pattern
+
+**See**: `docs/LED-EXAMPLE.md` for detailed walkthrough and `docs/DESIGN-PATTERNS.md` Pattern 11 for architecture.
+
+## Single-Layer Architecture Pattern
+
+Weighsoft services follow a **single-layer pattern** where application services directly compose framework components:
+
+```cpp
+class MyDeviceService : public StatefulService<MyDeviceState> {
+  HttpEndpoint<MyDeviceState> _httpEndpoint;      // REST API
+  WebSocketTxRx<MyDeviceState> _webSocket;        // Real-time updates
+  MqttPubSub<MyDeviceState> _mqttPubSub;          // MQTT pub/sub
+  BlePubSub<MyDeviceState> _blePubSub;            // BLE (Phase 2)
+  
+  // Inline protocol configuration (topics, UUIDs, etc.)
+  String _mqttBaseTopic;
+  String _bleServiceUuid;
+  
+  void configureMqtt();
+  void configureBle();
+  void onStateChanged();
+};
+```
+
+**Benefits**:
+- One service class manages all protocols
+- Configuration is inline (no separate settings UI needed)
+- Easy to add/remove protocols per device type
+- Origin tracking prevents feedback loops automatically
+
+**Copy the LED Example**:
+1. Copy `src/examples/led/` → `src/examples/mydevice/`
+2. Rename classes: `LedExampleService` → `MyDeviceService`
+3. Modify state struct to match your device
+4. Update MQTT topics and BLE UUIDs
+5. Implement device-specific hardware control
 
 ## Complete Example: Temperature Sensor Service
 

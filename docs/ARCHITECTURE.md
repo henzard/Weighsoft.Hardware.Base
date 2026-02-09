@@ -67,28 +67,40 @@ All data management in the framework is built around the `StatefulService<T>` te
 - Origin tracking for update propagation
 - Composable infrastructure components
 
-### 2. Infrastructure Composition
+### 2. Single-Layer Service Architecture
+Weighsoft services use a **single-layer pattern** for protocol integration:
+- Application services directly compose framework components (`HttpEndpoint`, `WebSocketTxRx`, `MqttPubSub`, `BlePubSub`)
+- Protocol configuration (MQTT topics, BLE UUIDs) is managed inline within the service
+- No separate settings services for protocol configuration
+- Simplifies maintenance and reduces technical debt for industrial devices
+
+**Example**: `LedExampleService` composes `MqttPubSub` directly and manages MQTT topics inline, rather than depending on a separate `LedMqttSettingsService`.
+
+**Rationale**: Industrial IoT devices typically have one primary function (scale, relay, sensor) and don't need runtime configuration of protocol parameters. Inline configuration is simpler and sufficient.
+
+### 3. Infrastructure Composition
 Services compose infrastructure components rather than using inheritance:
 - `HttpEndpoint<T>` - REST API exposure
 - `FSPersistence<T>` - Filesystem persistence
 - `WebSocketTxRx<T>` - Real-time bidirectional communication
 - `MqttPubSub<T>` - MQTT pub/sub integration
+- `BlePubSub<T>` - BLE characteristic-based communication (Phase 2)
 
-### 3. Security by Design
+### 4. Security by Design
 - JWT-based authentication with configurable expiry
 - Authorization predicates (NONE_REQUIRED, IS_AUTHENTICATED, IS_ADMIN)
 - Secure WebSocket filtering
 - Request wrapping for protected endpoints
 
-### 4. Feature Modularity
-- Compile-time feature flags (FT_SECURITY, FT_MQTT, FT_NTP, FT_OTA, FT_UPLOAD_FIRMWARE)
+### 5. Feature Modularity
+- Compile-time feature flags (FT_SECURITY, FT_MQTT, FT_NTP, FT_OTA, FT_UPLOAD_FIRMWARE, FT_BLE)
 - Conditional compilation for memory optimization
 - Optional services based on project requirements
 
-### 5. Event-Driven Updates
+### 6. Event-Driven Updates
 - Update handlers propagate state changes
-- Origin ID prevents circular updates
-- Multiple communication channels synchronized automatically
+- Origin ID prevents circular updates across multiple channels
+- Multiple communication channels (REST, WebSocket, MQTT, BLE) synchronized automatically
 
 ## System Capabilities
 

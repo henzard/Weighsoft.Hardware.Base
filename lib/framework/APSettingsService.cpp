@@ -4,7 +4,6 @@ APSettingsService::APSettingsService(AsyncWebServer* server, FS* fs, SecurityMan
     _httpEndpoint(APSettings::read, APSettings::update, this, server, AP_SETTINGS_SERVICE_PATH, securityManager),
     _fsPersistence(APSettings::read, APSettings::update, this, fs, AP_SETTINGS_FILE),
     _dnsServer(nullptr),
-    _dnsServerRunning(false),
     _lastManaged(0),
     _reconfigureAp(false) {
   addUpdateHandler([&](const String& originId) { reconfigureAP(); }, false);
@@ -48,36 +47,28 @@ void APSettingsService::startAP() {
   Serial.println(F("Starting software access point"));
   WiFi.softAPConfig(_state.localIP, _state.gatewayIP, _state.subnetMask);
   WiFi.softAP(_state.ssid.c_str(), _state.password.c_str(), _state.channel, _state.ssidHidden, _state.maxClients);
-  if (!_dnsServerRunning) {
+  if (!_dnsServer) {
     IPAddress apIp = WiFi.softAPIP();
     Serial.print(F("Starting captive portal on "));
     Serial.println(apIp);
-    if (!_dnsServer) {
-      _dnsServer = new DNSServer;
-    }
+    _dnsServer = new DNSServer;
     _dnsServer->start(DNS_PORT, "*", apIp);
-    _dnsServerRunning = true;
   }
 }
 
 void APSettingsService::stopAP() {
-  Serial.println(F("Stopping software access point"));
-  WiFi.softAPdisconnect(true);
-  #ifdef ESP32
-  // ESP32: Wait for AP to fully disconnect before stopping DNS
-  delay(100);
-  #endif
-  if (_dnsServerRunning) {
+  if (_dnsServer) {
     Serial.println(F("Stopping captive portal"));
     _dnsServer->stop();
-    _dnsServerRunning = false;
-    // ESP32: NEVER delete DNS server due to heap corruption bug
-    // Just leave it stopped and reuse it on next AP start
+    delete _dnsServer;
+    _dnsServer = nullptr;
   }
+  Serial.println(F("Stopping software access point"));
+  WiFi.softAPdisconnect(true);
 }
 
 void APSettingsService::handleDNS() {
-  if (_dnsServerRunning) {
+  if (_dnsServer) {
     _dnsServer->processNextRequest();
   }
 }

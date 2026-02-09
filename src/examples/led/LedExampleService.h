@@ -1,11 +1,10 @@
-#ifndef LightStateService_h
-#define LightStateService_h
-
-#include <LightMqttSettingsService.h>
+#ifndef LedExampleService_h
+#define LedExampleService_h
 
 #include <HttpEndpoint.h>
 #include <MqttPubSub.h>
 #include <WebSocketTxRx.h>
+#include <SettingValue.h>
 
 #define LED_PIN 2
 
@@ -23,31 +22,31 @@
 #define LED_OFF 0x1
 #endif
 
-#define LIGHT_SETTINGS_ENDPOINT_PATH "/rest/lightState"
-#define LIGHT_SETTINGS_SOCKET_PATH "/ws/lightState"
+#define LED_EXAMPLE_ENDPOINT_PATH "/rest/ledExample"
+#define LED_EXAMPLE_SOCKET_PATH "/ws/ledExample"
 
-class LightState {
+class LedExampleState {
  public:
   bool ledOn;
 
-  static void read(LightState& settings, JsonObject& root) {
+  static void read(LedExampleState& settings, JsonObject& root) {
     root["led_on"] = settings.ledOn;
   }
 
-  static StateUpdateResult update(JsonObject& root, LightState& lightState) {
+  static StateUpdateResult update(JsonObject& root, LedExampleState& ledState) {
     boolean newState = root["led_on"] | DEFAULT_LED_STATE;
-    if (lightState.ledOn != newState) {
-      lightState.ledOn = newState;
+    if (ledState.ledOn != newState) {
+      ledState.ledOn = newState;
       return StateUpdateResult::CHANGED;
     }
     return StateUpdateResult::UNCHANGED;
   }
 
-  static void haRead(LightState& settings, JsonObject& root) {
+  static void haRead(LedExampleState& settings, JsonObject& root) {
     root["state"] = settings.ledOn ? ON_STATE : OFF_STATE;
   }
 
-  static StateUpdateResult haUpdate(JsonObject& root, LightState& lightState) {
+  static StateUpdateResult haUpdate(JsonObject& root, LedExampleState& ledState) {
     String state = root["state"];
     // parse new led state 
     boolean newState = false;
@@ -57,30 +56,33 @@ class LightState {
       return StateUpdateResult::ERROR;
     }
     // change the new state, if required
-    if (lightState.ledOn != newState) {
-      lightState.ledOn = newState;
+    if (ledState.ledOn != newState) {
+      ledState.ledOn = newState;
       return StateUpdateResult::CHANGED;
     }
     return StateUpdateResult::UNCHANGED;
   }
 };
 
-class LightStateService : public StatefulService<LightState> {
+class LedExampleService : public StatefulService<LedExampleState> {
  public:
-  LightStateService(AsyncWebServer* server,
+  LedExampleService(AsyncWebServer* server,
                     SecurityManager* securityManager,
-                    AsyncMqttClient* mqttClient,
-                    LightMqttSettingsService* lightMqttSettingsService);
+                    AsyncMqttClient* mqttClient);
   void begin();
 
  private:
-  HttpEndpoint<LightState> _httpEndpoint;
-  MqttPubSub<LightState> _mqttPubSub;
-  WebSocketTxRx<LightState> _webSocket;
+  HttpEndpoint<LedExampleState> _httpEndpoint;
+  MqttPubSub<LedExampleState> _mqttPubSub;
+  WebSocketTxRx<LedExampleState> _webSocket;
   AsyncMqttClient* _mqttClient;
-  LightMqttSettingsService* _lightMqttSettingsService;
 
-  void registerConfig();
+  // Inline MQTT configuration - single-layer pattern
+  String _mqttBasePath;
+  String _mqttName;
+  String _mqttUniqueId;
+
+  void configureMqtt();
   void onConfigUpdated();
 };
 
