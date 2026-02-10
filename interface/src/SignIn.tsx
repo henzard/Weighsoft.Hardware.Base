@@ -2,7 +2,7 @@ import { FC, useContext, useState } from 'react';
 import { ValidateFieldsError } from 'async-validator';
 import { useSnackbar } from 'notistack';
 
-import { Box, Fab, Paper, Typography } from '@mui/material';
+import { Box, Fab, Paper, Typography, useTheme } from '@mui/material';
 import ForwardIcon from '@mui/icons-material/Forward';
 
 import * as AuthenticationApi from './api/authentication';
@@ -16,6 +16,8 @@ import { AuthenticationContext } from './contexts/authentication';
 const SignIn: FC = () => {
   const authenticationContext = useContext(AuthenticationContext);
   const { enqueueSnackbar } = useSnackbar();
+  const theme = useTheme();
+  const iconSrc = theme.palette.mode === 'dark' ? '/app/icon dark.png' : '/app/icon.png';
 
   const [signInRequest, setSignInRequest] = useState<SignInRequest>({
     username: '',
@@ -61,19 +63,19 @@ const SignIn: FC = () => {
       padding={2}
       justifyContent="center"
       flexDirection="column"
-      maxWidth={(theme) => theme.breakpoints.values.sm}
+      maxWidth={theme.breakpoints.values.sm}
     >
       <Paper
-        sx={(theme) => ({
+        sx={{
           textAlign: "center",
-          padding: theme.spacing(2),
+          padding: 2,
           paddingTop: "200px",
-          backgroundImage: 'url("/app/icon.png")',
+          backgroundImage: `url("${iconSrc}")`,
           backgroundRepeat: "no-repeat",
-          backgroundPosition: "50% " + theme.spacing(2),
+          backgroundPosition: "50% 16px",
           backgroundSize: "auto 150px",
           width: "100%"
-        })}
+        }}
       >
         <Typography variant="h4">{PROJECT_NAME}</Typography>
         <ValidatedTextField
