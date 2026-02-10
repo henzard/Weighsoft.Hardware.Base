@@ -1,7 +1,7 @@
 
 import { FC } from 'react';
 
-import { Box, Divider, Drawer, Toolbar, Typography, styled } from '@mui/material';
+import { Box, Divider, Drawer, Toolbar, Typography, styled, useTheme } from '@mui/material';
 
 import { PROJECT_NAME } from '../../api/env';
 import LayoutMenu from './LayoutMenu';
@@ -24,12 +24,14 @@ interface LayoutDrawerProps {
 }
 
 const LayoutDrawer: FC<LayoutDrawerProps> = ({ mobileOpen, onClose }) => {
+  const theme = useTheme();
+  const iconSrc = theme.palette.mode === 'dark' ? '/app/icon dark.png' : '/app/icon.png';
 
   const drawer = (
     <>
       <Toolbar disableGutters>
         <Box display="flex" alignItems="center" px={2}>
-          <LayoutDrawerLogo src="/app/icon.png" alt={PROJECT_NAME} />
+          <LayoutDrawerLogo src={iconSrc} alt={PROJECT_NAME} />
           <Typography variant="h6" color="textPrimary">
             {PROJECT_NAME}
           </Typography>
