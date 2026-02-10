@@ -12,11 +12,11 @@ const DisplayBle: FC = () => (
     <Typography variant="h6" gutterBottom>
       BLE Configuration
     </Typography>
-    <Paper elevation={1} sx={{ p: 2, bgcolor: 'grey.50', mb: 2 }}>
-      <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
+    <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.paper', mb: 2 }}>
+      <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1, color: 'text.primary' }}>
         <strong>Service UUID:</strong> a8f3d5e0-8b2c-4f1a-9d6e-3c7b4a5f1e8d
       </Typography>
-      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+      <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
         <strong>Characteristic UUID:</strong> a8f3d5e1-8b2c-4f1a-9d6e-3c7b4a5f1e8d
       </Typography>
     </Paper>
@@ -42,8 +42,8 @@ const DisplayBle: FC = () => (
     <Typography variant="body2" paragraph>
       The characteristic uses JSON format:
     </Typography>
-    <Paper elevation={1} sx={{ p: 2, bgcolor: 'grey.50', mb: 2 }}>
-      <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '12px' }}>
+    <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.paper', mb: 2 }}>
+      <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '12px', color: 'inherit' }}>
 {`{
   "line1": "Hello World",
   "line2": "From BLE",

@@ -126,17 +126,20 @@ const DisplayControl: FC = () => {
         sx={{ mb: 2 }}
       />
 
-      <Paper elevation={2} sx={{ p: 2, mb: 2, bgcolor: 'grey.100' }}>
-        <Typography variant="subtitle2" gutterBottom>
+      <Paper elevation={2} sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}>
+        <Typography variant="subtitle2" gutterBottom color="text.primary">
           Display Preview:
         </Typography>
         <Box
           sx={{
             fontFamily: 'monospace',
             fontSize: '14px',
-            bgcolor: data.backlight ? 'lightblue' : 'grey.400',
+            bgcolor: data.backlight ? '#4FC3F7' : '#424242',
+            color: data.backlight ? '#000' : '#9E9E9E',
             p: 1,
             borderRadius: 1,
+            border: '2px solid',
+            borderColor: 'divider',
           }}
         >
           <div>{(data.line1 || '').substring(0, 16).padEnd(16, ' ')}</div>
