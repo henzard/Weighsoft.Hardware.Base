@@ -35,7 +35,9 @@ const SerialBle: FC = () => (
       <ListItem>1. Scan for devices, connect to your ESP32</ListItem>
       <ListItem>2. Find the Serial service (UUID above)</ListItem>
       <ListItem>3. Enable notifications on the characteristic</ListItem>
-      <ListItem>4. Data will stream as JSON: {`{"last_line":"...","timestamp":...}`}</ListItem>
+      <ListItem>
+        4. Data will stream as JSON: {`{"last_line":"...","weight":"...","timestamp":...}`}
+      </ListItem>
     </List>
   </SectionContent>
 );

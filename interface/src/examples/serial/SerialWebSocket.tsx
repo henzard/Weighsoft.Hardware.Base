@@ -4,21 +4,27 @@ import { SectionContent } from '../../components';
 import { WEB_SOCKET_ROOT } from '../../api/endpoints';
 import { useWs } from '../../utils';
 import { SerialData } from '../../types/serial';
+import { formatSerialTimestamp } from './formatSerialTimestamp';
 
 export const SERIAL_WEBSOCKET_URL = WEB_SOCKET_ROOT + "serial";
 
 const SerialWebSocket: FC = () => {
-  const [lines, setLines] = useState<Array<{text: string, timestamp: number}>>([]);
+  const [lines, setLines] = useState<Array<{
+    text: string;
+    timestamp: number;
+    weight: string;
+  }>>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+
   const { data } = useWs<SerialData>(SERIAL_WEBSOCKET_URL);
-  
+
   useEffect(() => {
     if (data?.last_line) {
-      setLines(prev => [...prev, { 
-        text: data.last_line, 
-        timestamp: data.timestamp 
-      }].slice(-100)); // Keep last 100 lines
+      setLines((prev) => [...prev, {
+        text: data.last_line,
+        timestamp: data.timestamp,
+        weight: data.weight ?? ''
+      }].slice(-100));
       
       // Auto-scroll to bottom
       if (scrollRef.current) {
@@ -54,17 +60,22 @@ const SerialWebSocket: FC = () => {
         ) : (
           lines.map((line, idx) => (
             <Box key={idx} sx={{ mb: 0.5 }}>
-              <Typography 
-                component="span" 
-                variant="caption" 
+              <Typography
+                component="span"
+                variant="caption"
                 color="text.secondary"
                 sx={{ mr: 1 }}
               >
-                [{new Date(line.timestamp).toLocaleTimeString()}]
+                [{formatSerialTimestamp(line.timestamp)}]
               </Typography>
               <Typography component="span">
                 {line.text}
               </Typography>
+              {line.weight !== '' && (
+                <Typography component="span" color="primary" sx={{ ml: 1 }}>
+                  → {line.weight}
+                </Typography>
+              )}
             </Box>
           ))
         )}
