@@ -106,8 +106,8 @@ const DisplayControl: FC = () => {
         fullWidth
         select
         variant="outlined"
-        value={data.i2cAddress || 0x27}
-        onChange={(e) => updateField('i2cAddress', parseInt(e.target.value))}
+        value={data.i2c_address || 0x27}
+        onChange={(e) => updateField('i2c_address', parseInt(e.target.value))}
         helperText="Change if your display uses a different I2C address"
         sx={{ mb: 2 }}
       >

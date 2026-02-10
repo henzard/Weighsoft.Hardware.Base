@@ -31,7 +31,7 @@ export const DisplaySerialBridge: FC = () => {
   }
 
   const handleModeChange = (mode: 'off' | 'websocket' | 'mqtt' | 'ble') => {
-    setData({ ...data, bridgeMode: mode });
+    setData({ ...data, bridge_mode: mode });
   };
 
   return (
@@ -44,7 +44,7 @@ export const DisplaySerialBridge: FC = () => {
       <FormControl fullWidth sx={{ mb: 2 }}>
         <InputLabel>Bridge Mode</InputLabel>
         <Select
-          value={data.bridgeMode}
+          value={data.bridge_mode}
           label="Bridge Mode"
           onChange={(e) => handleModeChange(e.target.value as any)}
         >
@@ -55,7 +55,7 @@ export const DisplaySerialBridge: FC = () => {
         </Select>
       </FormControl>
 
-      {data.bridgeMode === 'websocket' && (
+      {data.bridge_mode === 'websocket' && (
         <Paper elevation={1} sx={{ p: 2, mb: 2, bgcolor: 'background.paper' }}>
           <Typography variant="subtitle2" gutterBottom color="text.primary">
             WebSocket Configuration
@@ -63,8 +63,8 @@ export const DisplaySerialBridge: FC = () => {
           <TextField
             fullWidth
             label="Serial Device IP"
-            value={data.serialDeviceIP}
-            onChange={(e) => setData({ ...data, serialDeviceIP: e.target.value })}
+            value={data.serial_device_ip}
+            onChange={(e) => setData({ ...data, serial_device_ip: e.target.value })}
             helperText="e.g., 192.168.3.100"
             sx={{ mb: 2 }}
           />
@@ -72,14 +72,14 @@ export const DisplaySerialBridge: FC = () => {
             fullWidth
             type="number"
             label="Port"
-            value={data.serialDevicePort}
-            onChange={(e) => setData({ ...data, serialDevicePort: parseInt(e.target.value) || 80 })}
+            value={data.serial_device_port}
+            onChange={(e) => setData({ ...data, serial_device_port: parseInt(e.target.value) || 80 })}
             helperText="Usually 80 for HTTP"
           />
         </Paper>
       )}
 
-      {data.bridgeMode === 'mqtt' && (
+      {data.bridge_mode === 'mqtt' && (
         <Paper elevation={1} sx={{ p: 2, mb: 2, bgcolor: 'background.paper' }}>
           <Typography variant="subtitle2" gutterBottom color="text.primary">
             MQTT Configuration
@@ -87,8 +87,8 @@ export const DisplaySerialBridge: FC = () => {
           <TextField
             fullWidth
             label="Serial MQTT Topic"
-            value={data.serialMqttTopic}
-            onChange={(e) => setData({ ...data, serialMqttTopic: e.target.value })}
+            value={data.serial_mqtt_topic}
+            onChange={(e) => setData({ ...data, serial_mqtt_topic: e.target.value })}
             helperText="e.g., weighsoft/serial/a4e57cdb7928/data"
           />
           <Alert severity="info" sx={{ mt: 2 }}>
@@ -98,7 +98,7 @@ export const DisplaySerialBridge: FC = () => {
         </Paper>
       )}
 
-      {data.bridgeMode === 'ble' && (
+      {data.bridge_mode === 'ble' && (
         <Paper elevation={1} sx={{ p: 2, mb: 2, bgcolor: 'background.paper' }}>
           <Typography variant="subtitle2" gutterBottom color="text.primary">
             BLE Configuration
@@ -106,16 +106,16 @@ export const DisplaySerialBridge: FC = () => {
           <TextField
             fullWidth
             label="Serial BLE Service UUID"
-            value={data.serialBleServiceUuid}
-            onChange={(e) => setData({ ...data, serialBleServiceUuid: e.target.value })}
+            value={data.serial_ble_service_uuid}
+            onChange={(e) => setData({ ...data, serial_ble_service_uuid: e.target.value })}
             helperText="e.g., 0000181a-0000-1000-8000-00805f9b34fb"
             sx={{ mb: 2 }}
           />
           <TextField
             fullWidth
             label="Serial BLE Characteristic UUID"
-            value={data.serialBleCharUuid}
-            onChange={(e) => setData({ ...data, serialBleCharUuid: e.target.value })}
+            value={data.serial_ble_char_uuid}
+            onChange={(e) => setData({ ...data, serial_ble_char_uuid: e.target.value })}
             helperText="e.g., 00002a58-0000-1000-8000-00805f9b34fb"
           />
           <Alert severity="info" sx={{ mt: 2 }}>
@@ -130,9 +130,9 @@ export const DisplaySerialBridge: FC = () => {
           variant="contained"
           color="primary"
           onClick={saveData}
-          disabled={saving || data.bridgeMode === 'off'}
+          disabled={saving || data.bridge_mode === 'off'}
         >
-          {data.bridgeMode === 'off' ? 'Select Mode to Enable' : 'Apply Configuration'}
+          {data.bridge_mode === 'off' ? 'Select Mode to Enable' : 'Apply Configuration'}
         </Button>
       </Box>
 
