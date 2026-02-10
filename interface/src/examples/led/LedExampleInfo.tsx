@@ -36,8 +36,8 @@ const LedExampleInfo: FC = () => (
       </ListItem>
       <ListItem>
         <ListItemText
-          primary="BLE (Phase 2)"
-          secondary="Bluetooth Low Energy for mobile app integration (coming soon)"
+          primary="BLE"
+          secondary="Bluetooth Low Energy for mobile app integration and local device control"
         />
       </ListItem>
     </List>
@@ -93,6 +93,9 @@ const LedExampleInfo: FC = () => (
       </ListItem>
       <ListItem>
         <ListItemText primary="LedControlWebSocket.tsx" secondary="WebSocket control with live updates" />
+      </ListItem>
+      <ListItem>
+        <ListItemText primary="LedControlBle.tsx" secondary="Bluetooth Low Energy control and device management" />
       </ListItem>
     </List>
 
