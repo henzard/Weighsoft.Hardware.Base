@@ -6,12 +6,15 @@
 #include <WebSocketTxRx.h>
 #include <SettingValue.h>
 #include <LiquidCrystal_I2C.h>
+#include <WebSocketsClient.h>
 
 #if FT_ENABLED(FT_BLE)
 #include <BlePubSub.h>
 #include <BLEServer.h>
 #include <BLEService.h>
 #include <BLECharacteristic.h>
+#include <BLEDevice.h>
+#include <BLEClient.h>
 #endif
 
 #define DISPLAY_ENDPOINT_PATH "/rest/display"
@@ -23,12 +26,28 @@ class DisplayState {
   String line2;
   uint8_t i2cAddress;
   bool backlight;
+  
+  // Serial bridge configuration
+  String bridgeMode;
+  String serialDeviceIP;
+  uint16_t serialDevicePort;
+  String serialMqttTopic;
+  String serialBleServiceUuid;
+  String serialBleCharUuid;
 
   static void read(DisplayState& state, JsonObject& root) {
     root["line1"] = state.line1;
     root["line2"] = state.line2;
     root["i2c_address"] = state.i2cAddress;
     root["backlight"] = state.backlight;
+    
+    // Serial bridge fields
+    root["bridge_mode"] = state.bridgeMode;
+    root["serial_device_ip"] = state.serialDeviceIP;
+    root["serial_device_port"] = state.serialDevicePort;
+    root["serial_mqtt_topic"] = state.serialMqttTopic;
+    root["serial_ble_service_uuid"] = state.serialBleServiceUuid;
+    root["serial_ble_char_uuid"] = state.serialBleCharUuid;
   }
 
   static StateUpdateResult update(JsonObject& root, DisplayState& state) {
@@ -60,6 +79,43 @@ class DisplayState {
       changed = true;
     }
     
+    // Serial bridge fields
+    String newMode = root["bridge_mode"] | "off";
+    if (state.bridgeMode != newMode) {
+      state.bridgeMode = newMode;
+      changed = true;
+    }
+    
+    String newIP = root["serial_device_ip"] | "";
+    if (state.serialDeviceIP != newIP) {
+      state.serialDeviceIP = newIP;
+      changed = true;
+    }
+    
+    uint16_t newPort = root["serial_device_port"] | 80;
+    if (state.serialDevicePort != newPort) {
+      state.serialDevicePort = newPort;
+      changed = true;
+    }
+    
+    String newTopic = root["serial_mqtt_topic"] | "";
+    if (state.serialMqttTopic != newTopic) {
+      state.serialMqttTopic = newTopic;
+      changed = true;
+    }
+    
+    String newBleService = root["serial_ble_service_uuid"] | "";
+    if (state.serialBleServiceUuid != newBleService) {
+      state.serialBleServiceUuid = newBleService;
+      changed = true;
+    }
+    
+    String newBleChar = root["serial_ble_char_uuid"] | "";
+    if (state.serialBleCharUuid != newBleChar) {
+      state.serialBleCharUuid = newBleChar;
+      changed = true;
+    }
+    
     return changed ? StateUpdateResult::CHANGED : StateUpdateResult::UNCHANGED;
   }
 };
@@ -74,6 +130,7 @@ class DisplayService : public StatefulService<DisplayState> {
 #endif
                     );
   void begin();
+  void loop();
 
 #if FT_ENABLED(FT_BLE)
   void setBleServer(BLEServer* bleServer) { _bleServer = bleServer; }
@@ -88,6 +145,10 @@ class DisplayService : public StatefulService<DisplayState> {
 
   // Hardware
   LiquidCrystal_I2C* _lcd;
+  
+  // Serial bridge - WebSocket client
+  WebSocketsClient* _wsClient;
+  String _currentMqttSub;
 
   // Inline MQTT configuration - single-layer pattern
   String _mqttBasePath;
@@ -100,6 +161,12 @@ class DisplayService : public StatefulService<DisplayState> {
   BLEService* _bleService;
   BLECharacteristic* _bleCharacteristic;
   
+  // Serial bridge - BLE client
+  BLEClient* _bleClient;
+  BLERemoteCharacteristic* _bleRemoteChar;
+  bool _bleScanning;
+  static DisplayService* _instance;
+  
   // Inline BLE configuration - single-layer pattern
   static constexpr const char* BLE_SERVICE_UUID = "a8f3d5e0-8b2c-4f1a-9d6e-3c7b4a5f1e8d";
   static constexpr const char* BLE_CHAR_UUID = "a8f3d5e1-8b2c-4f1a-9d6e-3c7b4a5f1e8d";
@@ -107,6 +174,20 @@ class DisplayService : public StatefulService<DisplayState> {
 
   void configureMqtt();
   void onConfigUpdated();
+  
+  // Serial bridge handlers
+  void onSerialDataReceived(const String& lastLine, const char* source);
+  void connectWebSocketBridge();
+  void disconnectWebSocketBridge();
+  void connectMqttBridge();
+  void disconnectMqttBridge();
+  void handleBridgeModeChange();
+  
+#if FT_ENABLED(FT_BLE)
+  void connectBleBridge();
+  void disconnectBleBridge();
+  static void bleNotifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify);
+#endif
 };
 
 #endif

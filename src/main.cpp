@@ -99,4 +99,9 @@ void setup() {
 void loop() {
   // run the framework's loop function
   esp8266React->loop();
+  
+  // run the display service's loop function for WebSocket client
+  if (displayService) {
+    displayService->loop();
+  }
 }
