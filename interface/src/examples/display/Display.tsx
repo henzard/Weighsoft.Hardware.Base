@@ -8,6 +8,7 @@ import { RouterTabs, useRouterTab, useLayoutTitle } from '../../components';
 
 import DisplayInfo from './DisplayInfo';
 import DisplayControl from './DisplayControl';
+import { DisplaySerialBridge } from './DisplaySerialBridge';
 import DisplayBle from './DisplayBle';
 
 const Display: FC = () => {
@@ -19,11 +20,13 @@ const Display: FC = () => {
       <RouterTabs value={routerTab}>
         <Tab value="information" label="Information" />
         <Tab value="control" label="Control" />
+        <Tab value="bridge" label="Serial Bridge" />
         <Tab value="ble" label="BLE Control" />
       </RouterTabs>
       <Routes>
         <Route path="information" element={<DisplayInfo />} />
         <Route path="control" element={<DisplayControl />} />
+        <Route path="bridge" element={<DisplaySerialBridge />} />
         <Route path="ble" element={<DisplayBle />} />
         <Route path="/*" element={<Navigate replace to="information" />} />
       </Routes>

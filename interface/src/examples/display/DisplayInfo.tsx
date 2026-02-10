@@ -98,6 +98,37 @@ const DisplayInfo: FC = () => (
       You can change the I2C address via the Control tab if your display uses a different address.
     </Typography>
 
+    <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+      Serial Bridge
+    </Typography>
+    <Typography variant="body2" paragraph>
+      The Display can connect to a Serial device (from the 'serial' branch) to show
+      streaming serial data on the LCD. Three connection modes are available:
+    </Typography>
+    <List dense>
+      <ListItem>
+        <ListItemText
+          primary="WebSocket Mode"
+          secondary="Direct connection to Serial device via IP address. Low latency, best for single display."
+        />
+      </ListItem>
+      <ListItem>
+        <ListItemText
+          primary="MQTT Mode"
+          secondary="Subscribe to Serial device's MQTT topic. No IP needed, works with multiple displays."
+        />
+      </ListItem>
+      <ListItem>
+        <ListItemText
+          primary="BLE Mode"
+          secondary="Bluetooth connection to Serial device. Works without WiFi, automatic device discovery."
+        />
+      </ListItem>
+    </List>
+    <Typography variant="body2" paragraph>
+      Configure in the "Serial Bridge" tab.
+    </Typography>
+
     <Typography variant="h6" gutterBottom>
       Use Cases
     </Typography>
