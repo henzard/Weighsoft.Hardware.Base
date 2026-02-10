@@ -7,10 +7,12 @@ The Serial Monitor service provides real-time monitoring and streaming of serial
 ## Features
 
 - **Line-Based Reading**: Reads complete lines from Serial2 (up to 512 characters)
-- **Multi-Channel Broadcasting**: Automatically streams data across all enabled channels
-- **REST API**: Polls the last received line
-- **WebSocket**: Real-time streaming of all incoming lines
-- **MQTT Publishing**: Publishes each line to a configurable topic
+- **Configurable Serial Port**: Baud rate, data bits (7/8), stop bits, parity (None/Even/Odd) via UI or REST
+- **Weight Extraction**: Optional regex pattern with one capture group extracts a value (e.g. weight) from each line; full line and extracted value are both transmitted
+- **Multi-Channel Broadcasting**: Automatically streams data (last_line and weight) across all enabled channels
+- **REST API**: GET last line and weight; POST to update serial and regex configuration
+- **WebSocket**: Real-time streaming of all incoming lines and extracted weights
+- **MQTT Publishing**: Publishes each line and weight to a configurable topic
 - **BLE Notifications**: Broadcasts data via Bluetooth Low Energy
 
 ## Hardware Setup
@@ -29,7 +31,7 @@ GND           ---  GND
 
 1. **Serial2 vs Serial**: This service uses Serial2 (hardware UART1) to avoid conflicts with the debug Serial (UART0)
 2. **Voltage Levels**: ESP32 operates at 3.3V - use a level shifter if connecting to 5V devices
-3. **Baud Rate**: Default is 115200, configurable in `SerialService::begin()`
+3. **Baud Rate**: Default is 115200, configurable via the Configuration tab or REST POST
 
 ## Architecture
 
@@ -53,11 +55,13 @@ All protocol handlers are composed directly within the service, with inline conf
 
 ### File Structure
 
+Reference: @src/examples/serial/
+
 ```
 src/examples/serial/
-├── SerialState.h         # State structure (last_line, timestamp)
+├── SerialState.h         # State structure (last_line, weight, timestamp, config)
 ├── SerialService.h       # Service header with protocol composition
-└── SerialService.cpp     # Implementation with Serial2 reading logic
+└── SerialService.cpp     # Implementation with Serial2 reading and regex extraction
 ```
 
 ### Key Components
@@ -67,17 +71,22 @@ src/examples/serial/
 ```cpp
 class SerialState {
  public:
-  String lastLine;
+  String lastLine;      // Full line from serial
+  String weight;        // Extracted value (first capture group) or empty
   unsigned long timestamp;
-  
+  uint32_t baudrate;    // 9600, 115200, etc.
+  uint8_t databits;     // 7 or 8
+  uint8_t stopbits;     // 1 or 2
+  uint8_t parity;       // 0=None, 1=Even, 2=Odd
+  String regexPattern; // e.g. "(\\d+\\.?\\d*)"
   static void read(SerialState& state, JsonObject& root);
   static StateUpdateResult update(JsonObject& root, SerialState& state);
 };
 ```
 
-- **lastLine**: The most recently received complete line
+- **lastLine** / **weight**: Last received line and extracted weight (empty if regex does not match)
 - **timestamp**: millis() when the line was received
-- **Read-Only**: Update function returns UNCHANGED (data flows hardware → channels only)
+- **Configuration**: baud_rate, data_bits, stop_bits, parity, regex_pattern can be updated via REST POST; changes trigger Serial2 reconfiguration
 
 #### SerialService
 
@@ -121,10 +130,13 @@ void SerialService::readSerial() {
 
 ### File Structure
 
+Reference: @interface/src/examples/serial/
+
 ```
 interface/src/examples/serial/
 ├── SerialMonitor.tsx      # Main router with tabs
 ├── SerialInfo.tsx         # Information/documentation page
+├── SerialConfig.tsx       # Serial port and regex configuration form
 ├── SerialRest.tsx         # REST polling view
 ├── SerialWebSocket.tsx    # Real-time streaming view
 └── SerialBle.tsx          # BLE connection instructions
@@ -162,19 +174,31 @@ interface/src/examples/serial/
 
 **GET** `/rest/serial`
 
-Returns the last received serial line.
+Returns the last received serial line, extracted weight, and current configuration.
 
 **Response**:
 ```json
 {
-  "last_line": "Sensor reading: 23.5°C",
-  "timestamp": 12345678
+  "last_line": "Weight: 12.5 kg",
+  "weight": "12.5",
+  "timestamp": 12345678,
+  "baud_rate": 115200,
+  "data_bits": 8,
+  "stop_bits": 1,
+  "parity": 0,
+  "regex_pattern": "(\\d+\\.\\d+)"
 }
 ```
 
 **Fields**:
 - `last_line` (string): Most recently received complete line
+- `weight` (string): Extracted value from first regex capture group, or empty
 - `timestamp` (number): ESP32 millis() when line was received
+- `baud_rate`, `data_bits`, `stop_bits`, `parity`, `regex_pattern`: Serial and extraction configuration
+
+**POST** `/rest/serial`
+
+Update serial port and regex configuration. Request body can include any of: `baud_rate`, `data_bits`, `stop_bits`, `parity`, `regex_pattern`. Serial2 is reconfigured immediately.
 
 ### WebSocket Endpoint
 
@@ -185,7 +209,8 @@ Streams real-time data as lines arrive.
 **Message Format**:
 ```json
 {
-  "last_line": "Sensor reading: 23.5°C",
+  "last_line": "Weight: 12.5 kg",
+  "weight": "12.5",
   "timestamp": 12345678
 }
 ```
@@ -208,7 +233,8 @@ Where `{unique_id}` is the device's unique identifier (MAC-based).
 **Payload**:
 ```json
 {
-  "last_line": "Sensor reading: 23.5°C",
+  "last_line": "Weight: 12.5 kg",
+  "weight": "12.5",
   "timestamp": 12345678
 }
 ```
@@ -227,7 +253,7 @@ mosquitto_sub -h broker.example.com -t "weighsoft/serial/+/data"
 
 **Value Format**: UTF-8 JSON string
 ```json
-{"last_line":"Sensor reading: 23.5°C","timestamp":12345678}
+{"last_line":"Weight: 12.5 kg","weight":"12.5","timestamp":12345678}
 ```
 
 ## Testing
@@ -388,15 +414,20 @@ If receiving data at very high rates (>1000 lines/sec):
 
 ## Configuration
 
-### Change Baud Rate
+### Serial port and regex (UI or REST)
 
-Edit `SerialService.cpp`:
-```cpp
-void SerialService::begin() {
-  Serial2.begin(9600);  // Change from 115200
-  // ...
-}
-```
+Use the **Configuration** tab in the Serial project, or **POST** to `/rest/serial` with JSON body:
+
+- **baud_rate**: 300–2000000 (e.g. 9600, 115200)
+- **data_bits**: 7 or 8 (5 and 6 are mapped to 7 on ESP32)
+- **stop_bits**: 1 or 2
+- **parity**: 0 = None, 1 = Even, 2 = Odd
+- **regex_pattern**: Optional. First capture group is used as `weight`. Examples:
+  - `(\d+\.?\d*)` – first decimal or integer number
+  - `Weight:\s*(\d+\.?\d*)` – value after "Weight: "
+  - `(\d+\.\d+)\s*kg` – number before " kg"
+
+If the pattern does not match a line, `last_line` is still sent and `weight` is empty.
 
 ### Change GPIO Pins
 

@@ -518,23 +518,33 @@ Update LED state.
 
 #### GET /rest/serial
 
-Get last received serial line.
+Get last received serial line, extracted weight, and serial/regex configuration.
 
 **Security**: IS_AUTHENTICATED
 
 **Response** (200 OK):
 ```json
 {
-  "last_line": "Sensor reading: 23.5°C",
-  "timestamp": 12345678
+  "last_line": "Weight: 12.5 kg",
+  "weight": "12.5",
+  "timestamp": 12345678,
+  "baud_rate": 115200,
+  "data_bits": 8,
+  "stop_bits": 1,
+  "parity": 0,
+  "regex_pattern": "(\\d+\\.\\d+)"
 }
 ```
 
 **Field Descriptions**:
 - `last_line`: Most recently received complete line from Serial2
+- `weight`: Extracted value from first regex capture group, or empty string
 - `timestamp`: ESP32 millis() when line was received
+- `baud_rate`, `data_bits`, `stop_bits`, `parity`, `regex_pattern`: Serial port and weight-extraction configuration
 
-**Note**: This is read-only. Serial data flows from hardware only.
+#### POST /rest/serial
+
+Update serial port and regex configuration. Sending any of `baud_rate`, `data_bits`, `stop_bits`, `parity`, `regex_pattern` reconfigures Serial2 and/or the extraction pattern. Response same as GET.
 
 #### GET /rest/brokerSettings
 
@@ -614,17 +624,13 @@ Real-time serial data streaming.
 **Payload Format**:
 ```json
 {
-  "last_line": "GPS: 37.7749,-122.4194",
+  "last_line": "Weight: 12.5 kg",
+  "weight": "12.5",
   "timestamp": 12345678
 }
 ```
 
 **Behavior**: Server → Client only. New lines from Serial2 are automatically pushed to all connected clients.
-```json
-{
-  "led_on": true
-}
-```
 
 **Flow**:
 1. Client connects
@@ -658,7 +664,7 @@ Projects define their own MQTT topic structure. The framework provides two examp
 **Example**:
 ```
 Topic: weighsoft/serial/a4e57cdb7928/data
-Payload: {"last_line":"GPS: 37.7749,-122.4194","timestamp":12345678}
+Payload: {"last_line":"Weight: 12.5 kg","weight":"12.5","timestamp":12345678}
 ```
 
 ### Home Assistant Discovery
@@ -745,11 +751,11 @@ When BLE is enabled (`FT_BLE=1`), services expose characteristics for wireless c
 
 **Value Format**: UTF-8 JSON string
 ```json
-{"last_line":"Sensor: 23.5C","timestamp":12345678}
+{"last_line":"Weight: 12.5 kg","weight":"12.5","timestamp":12345678}
 ```
 
 **Usage**:
-- READ: Get last received serial line
+- READ: Get last received serial line and extracted weight
 - NOTIFY: Receive updates as new lines arrive from Serial2
 
 **Note**: Read-only - no WRITE property (data flows from hardware only)

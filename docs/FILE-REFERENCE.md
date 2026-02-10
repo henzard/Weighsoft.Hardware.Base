@@ -202,6 +202,7 @@ C:\Project\Weighsoft.Hardware.Base\
 |------|---------|
 | `SerialMonitor.tsx` | Main router with tabs |
 | `SerialInfo.tsx` | Documentation and hardware setup |
+| `SerialConfig.tsx` | Serial port and regex configuration form |
 | `SerialRest.tsx` | REST polling view |
 | `SerialWebSocket.tsx` | Real-time streaming view |
 | `SerialBle.tsx` | BLE connection instructions |
