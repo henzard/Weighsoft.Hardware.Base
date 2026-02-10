@@ -1,5 +1,9 @@
 #include <examples/serial/SerialService.h>
 
+#ifdef ESP32
+#include <HardwareSerial.h>
+#endif
+
 SerialService::SerialService(AsyncWebServer* server,
                              SecurityManager* securityManager,
                              AsyncMqttClient* mqttClient
@@ -30,26 +34,36 @@ SerialService::SerialService(AsyncWebServer* server,
     _bleCharacteristic(nullptr)
 #endif
 {
-  // Inline MQTT configuration using SettingValue placeholders
-  // Single-layer pattern - no separate settings service needed
   _mqttBasePath = SettingValue::format("weighsoft/serial/#{unique_id}");
   _mqttName = SettingValue::format("serial-monitor-#{unique_id}");
   _mqttUniqueId = SettingValue::format("serial-#{unique_id}");
-  
-  // Configure MQTT callback
   _mqttClient->onConnect(std::bind(&SerialService::configureMqtt, this));
-  
-  // No update handler needed - data flows one way (hardware → channels)
+  _serialStarted = false;
+
+  addUpdateHandler([this](const String& originId) {
+    if (originId != "serial_hw") {
+      onConfigUpdated();
+    }
+  }, false);
 }
 
 void SerialService::begin() {
-  // Initialize Serial2 (ESP32 GPIO16=RX, GPIO17=TX)
-  Serial2.begin(115200);
-  _state.lastLine = "";
-  _state.timestamp = 0;
+  update([&](SerialState& state) {
+    if (state.baudrate == 0) {
+      state.baudrate = SERIAL_DEFAULT_BAUDRATE;
+      state.databits = 8;
+      state.stopbits = 1;
+      state.parity = 0;
+      state.regexPattern = "";
+    }
+    state.lastLine = "";
+    state.weight = "";
+    state.timestamp = 0;
+    return StateUpdateResult::CHANGED;
+  }, "init");
   _lineBuffer = "";
-  
-  Serial.println(F("[Serial] Serial2 initialized at 115200 baud"));
+  _serialStarted = true;
+  Serial.println(F("[Serial] Serial2 initialized"));
   Serial.println(F("[Serial] RX=GPIO16, TX=GPIO17"));
 }
 
@@ -57,28 +71,108 @@ void SerialService::loop() {
   readSerial();
 }
 
+void SerialService::onConfigUpdated() {
+  applySerialConfig();
+}
+
+uint32_t SerialService::getSerialConfig() {
+#ifdef ESP32
+  uint8_t d = _state.databits;
+  uint8_t p = _state.parity;
+  uint8_t s = _state.stopbits;
+  if (d < 7) d = 7;
+  if (d > 8) d = 8;
+  if (s < 1) s = 1;
+  if (s > 2) s = 2;
+  if (p > 2) p = 0;
+  if (d == 7) {
+    if (p == 0) return s == 1 ? SERIAL_7N1 : SERIAL_7N2;
+    if (p == 1) return s == 1 ? SERIAL_7E1 : SERIAL_7E2;
+    return s == 1 ? SERIAL_7O1 : SERIAL_7O2;
+  }
+  if (p == 0) return s == 1 ? SERIAL_8N1 : SERIAL_8N2;
+  if (p == 1) return s == 1 ? SERIAL_8E1 : SERIAL_8E2;
+  return s == 1 ? SERIAL_8O1 : SERIAL_8O2;
+#else
+  return SERIAL_8N1;
+#endif
+}
+
+void SerialService::applySerialConfig() {
+#ifdef ESP32
+  if (_serialStarted) {
+    Serial2.end();
+  }
+  uint32_t baud = _state.baudrate;
+  if (baud < SERIAL_MIN_BAUDRATE || baud > SERIAL_MAX_BAUDRATE) {
+    baud = SERIAL_DEFAULT_BAUDRATE;
+  }
+  uint32_t config = getSerialConfig();
+  Serial2.begin(baud, config, SERIAL2_RX_PIN, SERIAL2_TX_PIN);
+  Serial.printf("[Serial] Reconfigured: %lu baud, %u%c%u\n",
+                (unsigned long)baud, _state.databits,
+                _state.parity == 0 ? 'N' : (_state.parity == 1 ? 'E' : 'O'),
+                _state.stopbits);
+#endif
+}
+
+String SerialService::extractWeight(const String& line) {
+  const String& pattern = _state.regexPattern;
+  if (pattern.length() == 0) {
+    return "";
+  }
+  int openParen = pattern.indexOf('(');
+  int closeParen = pattern.indexOf(')', openParen);
+  if (openParen < 0 || closeParen <= openParen) {
+    return "";
+  }
+  String prefix = pattern.substring(0, openParen);
+  int searchStart = 0;
+  if (prefix.length() > 0) {
+    int prefixPos = line.indexOf(prefix);
+    if (prefixPos < 0) return "";
+    searchStart = prefixPos + prefix.length();
+  }
+  int i = searchStart;
+  while (i < (int)line.length() && (line.charAt(i) == ' ' || line.charAt(i) == '\t')) {
+    i++;
+  }
+  if (i >= (int)line.length() || !isDigit(line.charAt(i))) {
+    return "";
+  }
+  int start = i;
+  while (i < (int)line.length() && isDigit(line.charAt(i))) {
+    i++;
+  }
+  if (i < (int)line.length() && line.charAt(i) == '.') {
+    i++;
+    while (i < (int)line.length() && isDigit(line.charAt(i))) {
+      i++;
+    }
+  }
+  return line.substring(start, i);
+}
+
 void SerialService::readSerial() {
   while (Serial2.available()) {
     char c = Serial2.read();
-    
+
     if (c == '\n') {
-      // Complete line received
       if (_lineBuffer.length() > 0) {
-        // Update state with new line - this will notify all channels
+        String extracted = extractWeight(_lineBuffer);
         update([&](SerialState& state) {
           state.lastLine = _lineBuffer;
+          state.weight = extracted;
           state.timestamp = millis();
           return StateUpdateResult::CHANGED;
-        }, "serial_hw");  // Origin ID prevents loops (though none expected)
+        }, "serial_hw");
       }
       _lineBuffer = "";
-    } else if (c != '\r') {  // Ignore carriage returns
+    } else if (c != '\r') {
       _lineBuffer += c;
-      
-      // Safety: limit line length to prevent memory issues
       if (_lineBuffer.length() > 512) {
         Serial.println(F("[Serial] WARNING: Line exceeded 512 chars, discarded"));
-        _lineBuffer = "";  // Discard oversized line
+        _lineBuffer = "";
       }
     }
   }
@@ -88,14 +182,9 @@ void SerialService::configureMqtt() {
   if (!_mqttClient->connected()) {
     return;
   }
-  
-  // Build topics from inline configuration
   String pubTopic = _mqttBasePath + "/data";
-  String subTopic = "";  // Read-only, no subscription needed
-  
-  // Configure MqttPubSub topics (empty subTopic = publish only)
+  String subTopic = "";
   _mqttPubSub.configureTopics(pubTopic, subTopic);
-  
   Serial.printf("[Serial] MQTT configured - topic: %s\n", pubTopic.c_str());
 }
 
@@ -105,26 +194,16 @@ void SerialService::configureBle() {
     Serial.println("[Serial] BLE server not available, skipping BLE configuration");
     return;
   }
-  
   Serial.println("[Serial] Configuring BLE service...");
-  
-  // Create BLE service with inline UUID
   _bleService = _bleServer->createService(BLE_SERVICE_UUID);
-  
-  // Create BLE characteristic with inline UUID (read-only with notifications)
   _bleCharacteristic = _bleService->createCharacteristic(
       BLE_CHAR_UUID,
       BLECharacteristic::PROPERTY_READ |
-      BLECharacteristic::PROPERTY_NOTIFY  // No WRITE - read-only
+      BLECharacteristic::PROPERTY_NOTIFY
   );
-  
-  // Configure BlePubSub to use this characteristic
   _blePubSub.configureCharacteristic(_bleCharacteristic);
-  
-  // Start the service
   _bleService->start();
-  
-  Serial.printf("[Serial] BLE service configured - Service UUID: %s, Char UUID: %s\n", 
+  Serial.printf("[Serial] BLE service configured - Service UUID: %s, Char UUID: %s\n",
                 BLE_SERVICE_UUID, BLE_CHAR_UUID);
 }
 #endif

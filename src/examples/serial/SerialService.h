@@ -17,6 +17,10 @@
 #define SERIAL_ENDPOINT_PATH "/rest/serial"
 #define SERIAL_SOCKET_PATH "/ws/serial"
 
+// ESP32 Serial2 default pins
+#define SERIAL2_RX_PIN 16
+#define SERIAL2_TX_PIN 17
+
 class SerialService : public StatefulService<SerialState> {
  public:
   SerialService(AsyncWebServer* server,
@@ -39,7 +43,7 @@ class SerialService : public StatefulService<SerialState> {
   MqttPubSub<SerialState> _mqttPubSub;
   WebSocketTxRx<SerialState> _webSocket;
   AsyncMqttClient* _mqttClient;
-  
+
   // Inline MQTT configuration - single-layer pattern
   String _mqttBasePath;
   String _mqttName;
@@ -50,16 +54,21 @@ class SerialService : public StatefulService<SerialState> {
   BLEServer* _bleServer;
   BLEService* _bleService;
   BLECharacteristic* _bleCharacteristic;
-  
+
   // Inline BLE UUIDs - single-layer pattern
   static constexpr const char* BLE_SERVICE_UUID = "12340000-e8f2-537e-4f6c-d104768a1234";
   static constexpr const char* BLE_CHAR_UUID = "12340001-e8f2-537e-4f6c-d104768a1234";
 #endif
 
-  String _lineBuffer;  // Accumulates serial data until newline
-  
+  String _lineBuffer;   // Accumulates serial data until newline
+  bool _serialStarted;  // True after first begin(), so we can call end() before reconfig
+
   void configureMqtt();
-  void readSerial();  // Called from loop()
+  void readSerial();       // Called from loop()
+  void applySerialConfig();  // Reconfigures Serial2 with current state
+  String extractWeight(const String& line);  // Extracts first capture group from regex pattern
+  uint32_t getSerialConfig();  // Converts databits/parity/stopbits to ESP32 config constant
+  void onConfigUpdated();  // Called when config changes (e.g. from REST POST)
 };
 
 #endif
