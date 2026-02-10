@@ -2,7 +2,7 @@ import { AxiosPromise } from 'axios';
 import { AXIOS } from './endpoints';
 import { DisplayData } from '../types/display';
 
-export const DISPLAY_ENDPOINT = '/rest/display';
+export const DISPLAY_ENDPOINT = 'display';
 
 export function readDisplayData(): AxiosPromise<DisplayData> {
   return AXIOS.get(DISPLAY_ENDPOINT);
