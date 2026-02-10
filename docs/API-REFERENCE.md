@@ -490,7 +490,7 @@ Get enabled feature flags.
 
 #### GET /rest/display
 
-Get LCD display state.
+Get LCD display state including Serial bridge configuration.
 
 **Security**: IS_AUTHENTICATED
 
@@ -500,7 +500,13 @@ Get LCD display state.
   "line1": "Weighsoft",
   "line2": "Display Ready",
   "i2c_address": 39,
-  "backlight": true
+  "backlight": true,
+  "bridge_mode": "mqtt",
+  "serial_device_ip": "192.168.3.100",
+  "serial_device_port": 80,
+  "serial_mqtt_topic": "weighsoft/serial/a4e57cdb7928/data",
+  "serial_ble_service_uuid": "0000181a-0000-1000-8000-00805f9b34fb",
+  "serial_ble_char_uuid": "00002a58-0000-1000-8000-00805f9b34fb"
 }
 ```
 
@@ -509,16 +515,45 @@ Get LCD display state.
 - `line2`: Text on LCD line 2 (max 16 characters)
 - `i2c_address`: I2C address as integer (39 = 0x27, 63 = 0x3F)
 - `backlight`: LCD backlight state
+- `bridge_mode`: Serial bridge mode (`"off"`, `"websocket"`, `"mqtt"`, or `"ble"`)
+- `serial_device_ip`: IP address of Serial device (for WebSocket mode)
+- `serial_device_port`: Port of Serial device (for WebSocket mode, usually 80)
+- `serial_mqtt_topic`: MQTT topic to subscribe to (for MQTT mode)
+- `serial_ble_service_uuid`: BLE service UUID of Serial device (for BLE mode)
+- `serial_ble_char_uuid`: BLE characteristic UUID of Serial device (for BLE mode)
 
 #### POST /rest/display
 
-Update LCD display state.
+Update LCD display state and Serial bridge configuration.
 
 **Security**: IS_AUTHENTICATED
 
 **Request**:
 ```json
 {
+  "line1": "New Text",
+  "line2": "Line 2",
+  "i2c_address": 39,
+  "backlight": true,
+  "bridge_mode": "websocket",
+  "serial_device_ip": "192.168.3.124",
+  "serial_device_port": 80,
+  "serial_mqtt_topic": "",
+  "serial_ble_service_uuid": "",
+  "serial_ble_char_uuid": ""
+}
+```
+
+**Bridge Mode Values**:
+- `"off"` - Bridge disabled
+- `"websocket"` - WebSocket client mode (requires `serial_device_ip` and `serial_device_port`)
+- `"mqtt"` - MQTT subscription mode (requires `serial_mqtt_topic`)
+- `"ble"` - BLE client mode (requires `serial_ble_service_uuid` and `serial_ble_char_uuid`)
+
+**Notes**:
+- When `bridge_mode` changes, device automatically connects/disconnects
+- Unused fields can be empty based on selected mode
+- Configuration persists across reboots
   "line1": "Hello World",
   "line2": "From REST",
   "i2c_address": 39,
