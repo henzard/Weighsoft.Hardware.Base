@@ -20,8 +20,8 @@ The Serial Monitor service provides real-time monitoring and streaming of serial
 ### Wiring Diagram
 
 ```
-ESP32 Pin          Serial Device
----------          -------------
+ESP32 Pin          Serial Device (Scale)
+---------          ---------------------
 GPIO16 (RX2)  <--  TX
 GPIO17 (TX2)  -->  RX (not currently used)
 GND           ---  GND
@@ -31,7 +31,8 @@ GND           ---  GND
 
 1. **Serial2 vs Serial**: This service uses Serial2 (hardware UART1) to avoid conflicts with the debug Serial (UART0)
 2. **Voltage Levels**: ESP32 operates at 3.3V - use a level shifter if connecting to 5V devices
-3. **Baud Rate**: Default is 115200, configurable via the Configuration tab or REST POST
+3. **Baud Rate**: Default is 115200, but **many scales use 9600 baud**. Use the Configuration tab or REST API to change if no data appears
+4. **Common Scale Formats**: Most scales output lines like `WN0001.68kg` or `Weight: 12.5 kg` with newline endings
 
 ## Architecture
 
@@ -386,9 +387,11 @@ View real-time logs via WebSocket in browser.
 ### No Data Received
 
 1. **Check Wiring**: Verify TX->RX connection and common ground
-2. **Baud Rate Mismatch**: Ensure sending device matches 115200 baud
-3. **Voltage Levels**: Use level shifter for 5V devices
-4. **Serial Monitor**: Close Arduino IDE Serial Monitor (conflicts with Serial2)
+2. **Baud Rate Mismatch**: Most scales use **9600 baud**, not 115200. Change in Configuration tab
+3. **Check Scale Output**: Connect scale to PC/Raspberry Pi with `cat /dev/ttyUSB0` to verify it's sending data
+4. **Voltage Levels**: Use level shifter for 5V devices
+5. **Serial Monitor**: Close Arduino IDE Serial Monitor (conflicts with Serial2)
+6. **Check Debug Logs**: Monitor Serial output for `[Serial] Received line:` messages
 
 ### Lines Truncated
 
@@ -463,6 +466,7 @@ void SerialService::readSerial() {
 ### Throughput
 
 - **Max Baud Rate**: 115200 (default), up to 2 Mbps possible
+- **Common Scale Baud**: Most industrial scales use **9600 baud**
 - **Max Line Rate**: ~1000 lines/sec (100 char average)
 - **Latency**: <10ms from serial RX to WebSocket TX
 
@@ -472,6 +476,34 @@ void SerialService::readSerial() {
 - **State**: ~550 bytes (String + timestamp + overhead)
 - **Per Channel**: ~200-500 bytes (varies by protocol)
 - **Total Impact**: ~2-3 KB
+
+## Common Scale Formats
+
+### Weighing Scale Output Examples
+
+**Format: `WN0001.68kg`** (common in industrial scales)
+- Regex pattern: `(\d+\.\d+)` → extracts `0001.68`
+- Regex pattern: `WN(\d+\.\d+)` → extracts `0001.68`
+- Typical baud: 9600
+
+**Format: `Weight: 12.5 kg`**
+- Regex pattern: `(\d+\.\d+)` → extracts `12.5`
+- Regex pattern: `Weight:\s*(\d+\.\d+)` → extracts `12.5`
+- Typical baud: 9600 or 115200
+
+**Format: `ST,GS,+00012.5kg`** (A&D scales)
+- Regex pattern: `([+-]?\d+\.\d+)` → extracts `+00012.5`
+- Typical baud: 9600
+
+**Testing your scale:**
+```bash
+# On Raspberry Pi or Linux PC
+cat /dev/ttyUSB0
+
+# Should show continuous output like:
+WN0001.68kg
+WN0001.68kg
+```
 
 ## Related Documentation
 

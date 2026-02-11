@@ -62,9 +62,10 @@ void SerialService::begin() {
     return StateUpdateResult::CHANGED;
   }, "init");
   _lineBuffer = "";
-  _serialStarted = true;
-  Serial.println(F("[Serial] Serial2 initialized"));
+  _serialStarted = false;  // Will be set to true by applySerialConfig
+  Serial.println(F("[Serial] Initializing Serial2..."));
   Serial.println(F("[Serial] RX=GPIO16, TX=GPIO17"));
+  applySerialConfig();  // Actually start Serial2
 }
 
 void SerialService::loop() {
@@ -102,6 +103,7 @@ void SerialService::applySerialConfig() {
 #ifdef ESP32
   if (_serialStarted) {
     Serial2.end();
+    Serial.println(F("[Serial] Stopping Serial2 for reconfiguration..."));
   }
   uint32_t baud = _state.baudrate;
   if (baud < SERIAL_MIN_BAUDRATE || baud > SERIAL_MAX_BAUDRATE) {
@@ -109,10 +111,11 @@ void SerialService::applySerialConfig() {
   }
   uint32_t config = getSerialConfig();
   Serial2.begin(baud, config, SERIAL2_RX_PIN, SERIAL2_TX_PIN);
-  Serial.printf("[Serial] Reconfigured: %lu baud, %u%c%u\n",
+  _serialStarted = true;
+  Serial.printf("[Serial] Serial2 started: %lu baud, %u%c%u, RX=GPIO%d, TX=GPIO%d\n",
                 (unsigned long)baud, _state.databits,
                 _state.parity == 0 ? 'N' : (_state.parity == 1 ? 'E' : 'O'),
-                _state.stopbits);
+                _state.stopbits, SERIAL2_RX_PIN, SERIAL2_TX_PIN);
 #endif
 }
 
@@ -159,6 +162,7 @@ void SerialService::readSerial() {
 
     if (c == '\n') {
       if (_lineBuffer.length() > 0) {
+        Serial.printf("[Serial] Received line: '%s'\n", _lineBuffer.c_str());
         String extracted = extractWeight(_lineBuffer);
         update([&](SerialState& state) {
           state.lastLine = _lineBuffer;
@@ -166,6 +170,7 @@ void SerialService::readSerial() {
           state.timestamp = millis();
           return StateUpdateResult::CHANGED;
         }, "serial_hw");
+        Serial.printf("[Serial] Weight extracted: '%s'\n", extracted.c_str());
       }
       _lineBuffer = "";
     } else if (c != '\r') {
