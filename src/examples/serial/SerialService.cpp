@@ -76,6 +76,14 @@ void SerialService::begin() {
 
 void SerialService::loop() {
   readSerial();
+
+  // Diagnostic heartbeat every 10 seconds
+  static unsigned long lastDiag = 0;
+  if (millis() - lastDiag >= 10000) {
+    lastDiag = millis();
+    Serial.printf("[Serial] Heartbeat: Serial2 started=%d, available=%d, buffer='%s' (%d chars)\n",
+                  _serialStarted, Serial2.available(), _lineBuffer.c_str(), _lineBuffer.length());
+  }
 }
 
 void SerialService::onConfigUpdated() {
@@ -166,7 +174,8 @@ void SerialService::readSerial() {
   while (Serial2.available()) {
     char c = Serial2.read();
 
-    if (c == '\n') {
+    // Accept either \n or \r as line ending (some scales send \r only)
+    if (c == '\n' || c == '\r') {
       if (_lineBuffer.length() > 0) {
         Serial.printf("[Serial] Received line: '%s'\n", _lineBuffer.c_str());
         String extracted = extractWeight(_lineBuffer);
@@ -179,7 +188,7 @@ void SerialService::readSerial() {
         Serial.printf("[Serial] Weight extracted: '%s'\n", extracted.c_str());
       }
       _lineBuffer = "";
-    } else if (c != '\r') {
+    } else {
       _lineBuffer += c;
       if (_lineBuffer.length() > 512) {
         Serial.println(F("[Serial] WARNING: Line exceeded 512 chars, discarded"));
