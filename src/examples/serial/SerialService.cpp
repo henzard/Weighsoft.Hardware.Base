@@ -75,14 +75,49 @@ void SerialService::begin() {
 }
 
 void SerialService::loop() {
-  readSerial();
+  // Raw byte diagnostic: log every single byte that arrives on Serial2
+  static unsigned long totalBytes = 0;
+  while (Serial2.available()) {
+    char c = Serial2.read();
+    totalBytes++;
+    // Log each byte as hex + printable char
+    if (c >= 32 && c <= 126) {
+      Serial.printf("[Serial] RX byte #%lu: 0x%02X '%c'\n", totalBytes, (uint8_t)c, c);
+    } else {
+      Serial.printf("[Serial] RX byte #%lu: 0x%02X (control)\n", totalBytes, (uint8_t)c);
+    }
 
-  // Diagnostic heartbeat every 10 seconds
+    // Line assembly (same logic as before)
+    if (c == '\n' || c == '\r') {
+      if (_lineBuffer.length() > 0) {
+        Serial.printf("[Serial] Complete line: '%s'\n", _lineBuffer.c_str());
+        String extracted = extractWeight(_lineBuffer);
+        update([&](SerialState& state) {
+          state.lastLine = _lineBuffer;
+          state.weight = extracted;
+          state.timestamp = millis();
+          return StateUpdateResult::CHANGED;
+        }, "serial_hw");
+        if (extracted.length() > 0) {
+          Serial.printf("[Serial] Weight extracted: '%s'\n", extracted.c_str());
+        }
+      }
+      _lineBuffer = "";
+    } else {
+      _lineBuffer += c;
+      if (_lineBuffer.length() > 512) {
+        Serial.println(F("[Serial] WARNING: Line exceeded 512 chars, discarded"));
+        _lineBuffer = "";
+      }
+    }
+  }
+
+  // Heartbeat every 5 seconds (shortened for debugging)
   static unsigned long lastDiag = 0;
-  if (millis() - lastDiag >= 10000) {
+  if (millis() - lastDiag >= 5000) {
     lastDiag = millis();
-    Serial.printf("[Serial] Heartbeat: Serial2 started=%d, available=%d, buffer='%s' (%d chars)\n",
-                  _serialStarted, Serial2.available(), _lineBuffer.c_str(), _lineBuffer.length());
+    Serial.printf("[Serial] Heartbeat: started=%d, totalRX=%lu, buffer=%d chars, baud=%lu\n",
+                  _serialStarted, totalBytes, _lineBuffer.length(), (unsigned long)_state.baudrate);
   }
 }
 
@@ -171,31 +206,7 @@ String SerialService::extractWeight(const String& line) {
 }
 
 void SerialService::readSerial() {
-  while (Serial2.available()) {
-    char c = Serial2.read();
-
-    // Accept either \n or \r as line ending (some scales send \r only)
-    if (c == '\n' || c == '\r') {
-      if (_lineBuffer.length() > 0) {
-        Serial.printf("[Serial] Received line: '%s'\n", _lineBuffer.c_str());
-        String extracted = extractWeight(_lineBuffer);
-        update([&](SerialState& state) {
-          state.lastLine = _lineBuffer;
-          state.weight = extracted;
-          state.timestamp = millis();
-          return StateUpdateResult::CHANGED;
-        }, "serial_hw");
-        Serial.printf("[Serial] Weight extracted: '%s'\n", extracted.c_str());
-      }
-      _lineBuffer = "";
-    } else {
-      _lineBuffer += c;
-      if (_lineBuffer.length() > 512) {
-        Serial.println(F("[Serial] WARNING: Line exceeded 512 chars, discarded"));
-        _lineBuffer = "";
-      }
-    }
-  }
+  // Kept for API compatibility but logic is now in loop() for diagnostics
 }
 
 void SerialService::configureMqtt() {
