@@ -5,6 +5,7 @@
 #endif
 
 SerialService::SerialService(AsyncWebServer* server,
+                             FS* fs,
                              SecurityManager* securityManager,
                              AsyncMqttClient* mqttClient
 #if FT_ENABLED(FT_BLE)
@@ -18,6 +19,11 @@ SerialService::SerialService(AsyncWebServer* server,
                   SERIAL_ENDPOINT_PATH,
                   securityManager,
                   AuthenticationPredicates::IS_AUTHENTICATED),
+    _fsPersistence(SerialState::readConfig,
+                   SerialState::updateConfig,
+                   this,
+                   fs,
+                   SERIAL_CONFIG_FILE),
     _mqttPubSub(SerialState::read, SerialState::update, this, mqttClient),
     _webSocket(SerialState::read,
                SerialState::update,
@@ -41,31 +47,31 @@ SerialService::SerialService(AsyncWebServer* server,
   _serialStarted = false;
 
   addUpdateHandler([this](const String& originId) {
-    if (originId != "serial_hw") {
+    // Skip "serial_hw" (data from scale) and "init" (begin() will call applySerialConfig() itself)
+    if (originId != "serial_hw" && originId != "init") {
       onConfigUpdated();
     }
   }, false);
 }
 
 void SerialService::begin() {
-  update([&](SerialState& state) {
-    if (state.baudrate == 0) {
-      state.baudrate = SERIAL_DEFAULT_BAUDRATE;
-      state.databits = 8;
-      state.stopbits = 1;
-      state.parity = 0;
-      state.regexPattern = "";
-    }
-    state.lastLine = "";
-    state.weight = "";
-    state.timestamp = 0;
-    return StateUpdateResult::CHANGED;
-  }, "init");
+  // Load persisted config from flash (baud_rate, data_bits, stop_bits, parity, regex_pattern)
+  _fsPersistence.readFromFS();
+  Serial.printf("[Serial] Loaded config: %lu baud, %u%c%u, regex='%s'\n",
+                (unsigned long)_state.baudrate, _state.databits,
+                _state.parity == 0 ? 'N' : (_state.parity == 1 ? 'E' : 'O'),
+                _state.stopbits, _state.regexPattern.c_str());
+
+  // Clear runtime data (not persisted)
+  _state.lastLine = "";
+  _state.weight = "";
+  _state.timestamp = 0;
   _lineBuffer = "";
-  _serialStarted = false;  // Will be set to true by applySerialConfig
+  _serialStarted = false;
+
+  // Start Serial2 with loaded config
   Serial.println(F("[Serial] Initializing Serial2..."));
-  Serial.println(F("[Serial] RX=GPIO16, TX=GPIO17"));
-  applySerialConfig();  // Actually start Serial2
+  applySerialConfig();
 }
 
 void SerialService::loop() {

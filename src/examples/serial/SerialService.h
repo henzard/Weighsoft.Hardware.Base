@@ -2,6 +2,7 @@
 #define SerialService_h
 
 #include <HttpEndpoint.h>
+#include <FSPersistence.h>
 #include <MqttPubSub.h>
 #include <WebSocketTxRx.h>
 #include <SettingValue.h>
@@ -16,6 +17,7 @@
 
 #define SERIAL_ENDPOINT_PATH "/rest/serial"
 #define SERIAL_SOCKET_PATH "/ws/serial"
+#define SERIAL_CONFIG_FILE "/config/serialConfig.json"
 
 // ESP32 Serial2 default pins
 #define SERIAL2_RX_PIN 16
@@ -24,6 +26,7 @@
 class SerialService : public StatefulService<SerialState> {
  public:
   SerialService(AsyncWebServer* server,
+                FS* fs,
                 SecurityManager* securityManager,
                 AsyncMqttClient* mqttClient
 #if FT_ENABLED(FT_BLE)
@@ -40,6 +43,7 @@ class SerialService : public StatefulService<SerialState> {
 
  private:
   HttpEndpoint<SerialState> _httpEndpoint;
+  FSPersistence<SerialState> _fsPersistence;
   MqttPubSub<SerialState> _mqttPubSub;
   WebSocketTxRx<SerialState> _webSocket;
   AsyncMqttClient* _mqttClient;

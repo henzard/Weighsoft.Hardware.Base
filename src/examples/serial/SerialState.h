@@ -32,6 +32,35 @@ class SerialState {
     root["regex_pattern"] = state.regexPattern;
   }
 
+  // Config-only read/update for FSPersistence (does not persist runtime data)
+  static void readConfig(SerialState& state, JsonObject& root) {
+    root["baud_rate"] = state.baudrate;
+    root["data_bits"] = state.databits;
+    root["stop_bits"] = state.stopbits;
+    root["parity"] = state.parity;
+    root["regex_pattern"] = state.regexPattern;
+  }
+
+  static StateUpdateResult updateConfig(JsonObject& root, SerialState& state) {
+    uint32_t baud = root["baud_rate"] | SERIAL_DEFAULT_BAUDRATE;
+    uint8_t data = root["data_bits"] | (uint8_t)8;
+    uint8_t stop = root["stop_bits"] | (uint8_t)1;
+    uint8_t par = root["parity"] | (uint8_t)0;
+    String regex = root["regex_pattern"] | "";
+
+    if (baud < SERIAL_MIN_BAUDRATE || baud > SERIAL_MAX_BAUDRATE) baud = SERIAL_DEFAULT_BAUDRATE;
+    if (data < 5 || data > 8) data = 8;
+    if (stop < 1 || stop > 2) stop = 1;
+    if (par > 2) par = 0;
+
+    state.baudrate = baud;
+    state.databits = data;
+    state.stopbits = stop;
+    state.parity = par;
+    state.regexPattern = regex;
+    return StateUpdateResult::CHANGED;
+  }
+
   static StateUpdateResult update(JsonObject& root, SerialState& state) {
     StateUpdateResult result = StateUpdateResult::UNCHANGED;
 

@@ -53,6 +53,7 @@ void setup() {
   Serial.println(F("[5/7] Initializing Serial monitor service..."));
   serialService = new SerialService(
       server,
+      esp8266React->getFS(),
       esp8266React->getSecurityManager(),
       esp8266React->getMqttClient()
 #if FT_ENABLED(FT_BLE)
