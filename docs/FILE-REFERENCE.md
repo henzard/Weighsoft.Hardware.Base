@@ -90,6 +90,7 @@ C:\Project\Weighsoft.Hardware.Base\
 |-----------|-------|---------|
 | `examples/led/` | `LedExampleService.h/cpp` | LED control with 4 channels (REST, WS, MQTT, BLE) |
 | `examples/serial/` | `SerialState.h`, `SerialService.h/cpp` | Serial2 monitoring and streaming |
+| `examples/diagnostics/` | `DiagnosticsState.h`, `DiagnosticsService.h/cpp` | UART hardware testing (loopback, baud scan, signal quality) |
 
 **Pattern**: Create your custom services in `examples/yourdevice/`
 
@@ -207,21 +208,30 @@ C:\Project\Weighsoft.Hardware.Base\
 | `SerialWebSocket.tsx` | Real-time streaming view |
 | `SerialBle.tsx` | BLE connection instructions |
 
+**Diagnostics Example** (`examples/diagnostics/`):
+
+| File | Purpose |
+|------|---------|
+| `Diagnostics.tsx` | Main router with tabs |
+| `DiagnosticsInfo.tsx` | Documentation and use cases |
+| `LoopbackTest.tsx` | Loopback test UI with live results |
+| `BaudDetector.tsx` | Baud rate scanner UI with progress |
+| `SignalQuality.tsx` | Signal quality test UI with metrics |
+
 ### /interface/src/api/ - API Layer
 
 | File | Purpose |
 |------|---------|
 | `endpoints.ts` | Base URLs and WebSocket paths |
 | `serial.ts` | Serial example API functions |
+| `diagnostics.ts` | Diagnostics API functions |
 
 ### /interface/src/types/ - TypeScript Types
 
 | File | Purpose |
 |------|---------|
 | `serial.ts` | Serial data types |
-
-| File | Purpose |
-|------|---------|
+| `diagnostics.ts` | Diagnostics test state types |
 | `wifi.ts` | WiFi types |
 | `mqtt.ts` | MQTT types |
 | `security.ts` | Security types |
@@ -287,7 +297,8 @@ interface/build/        # React production build
 ├── mqttSettings.json
 ├── ntpSettings.json
 ├── otaSettings.json
-└── brokerSettings.json
+├── brokerSettings.json
+└── serialConfig.json
 ```
 
 ## Key File Responsibilities

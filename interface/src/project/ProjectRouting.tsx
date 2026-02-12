@@ -3,6 +3,7 @@ import { Navigate, Routes, Route } from 'react-router-dom';
 
 import LedExample from '../examples/led/LedExample';
 import SerialMonitor from '../examples/serial/SerialMonitor';
+import Diagnostics from '../examples/diagnostics/Diagnostics';
 
 const ProjectRouting: FC = () => {
   return (
@@ -19,6 +20,10 @@ const ProjectRouting: FC = () => {
         // Serial Monitor project routes
       }
       <Route path="serial/*" element={<SerialMonitor />} />
+      {
+        // UART Diagnostics project routes
+      }
+      <Route path="diagnostics/*" element={<Diagnostics />} />
     </Routes>
   );
 };

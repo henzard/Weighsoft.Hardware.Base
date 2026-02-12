@@ -546,6 +546,128 @@ Get last received serial line, extracted weight, and serial/regex configuration.
 
 Update serial port and regex configuration. Sending any of `baud_rate`, `data_bits`, `stop_bits`, `parity`, `regex_pattern` reconfigures Serial2 and/or the extraction pattern. Response same as GET.
 
+#### GET /rest/diagnostics
+
+Get current UART diagnostic test state (loopback, baud scan, signal quality).
+
+**Security**: IS_AUTHENTICATED
+
+**Response** (200 OK):
+```json
+{
+  "loopback": {
+    "enabled": true,
+    "status": "pass",
+    "tx_count": 142,
+    "rx_count": 142,
+    "error_count": 0,
+    "success_rate": 100.0,
+    "last_test": "TEST:142",
+    "last_received": "TEST:142",
+    "uptime_seconds": 14
+  },
+  "baud_scan": {
+    "enabled": false,
+    "status": "found",
+    "detected_baud": 9600,
+    "current_index": 3,
+    "current_baud": 9600,
+    "test_packets": 5
+  },
+  "signal_quality": {
+    "enabled": false,
+    "status": "complete",
+    "quality_percent": 98,
+    "total_packets": 1000,
+    "sent_packets": 1000,
+    "received_packets": 980,
+    "avg_latency_ms": 0.52,
+    "jitter_ms": 0.08,
+    "error_count": 20,
+    "progress": 100.0
+  }
+}
+```
+
+**Field Descriptions**:
+
+**Loopback Test**:
+- `enabled`: Test is currently running
+- `status`: "idle", "running", "pass" (≥95% success), "fail" (<95%)
+- `tx_count`, `rx_count`, `error_count`: Packet counters
+- `success_rate`: (rx_count - error_count) / tx_count * 100
+- `last_test`, `last_received`: Most recent test strings
+- `uptime_seconds`: Test duration
+
+**Baud Scan**:
+- `enabled`: Scan is currently running
+- `status`: "idle", "scanning", "found", "not_found"
+- `detected_baud`: Detected baud rate (0 if not found)
+- `current_index`: Index in baud rate array being tested (0-7)
+- `current_baud`: Current baud rate being tested
+- `test_packets`: Packets received at current baud
+
+**Signal Quality**:
+- `enabled`: Test is currently running
+- `status`: "idle", "running", "complete"
+- `quality_percent`: Success rate 0-100%
+- `total_packets`, `sent_packets`, `received_packets`: Packet counters
+- `avg_latency_ms`: Average round-trip latency
+- `jitter_ms`: Latency standard deviation
+- `error_count`: Corrupted/mismatched packets
+- `progress`: Test completion percentage
+
+#### POST /rest/diagnostics
+
+Start/stop diagnostic tests and configure parameters.
+
+**Security**: IS_AUTHENTICATED
+
+**Start Loopback Test**:
+```json
+{
+  "loopback_enabled": true
+}
+```
+
+**Stop Loopback Test**:
+```json
+{
+  "loopback_enabled": false
+}
+```
+
+**Start Baud Scan**:
+```json
+{
+  "baud_scan_enabled": true
+}
+```
+
+**Stop Baud Scan**:
+```json
+{
+  "baud_scan_enabled": false
+}
+```
+
+**Start Signal Quality Test**:
+```json
+{
+  "signal_test_enabled": true,
+  "signal_total_packets": 1000
+}
+```
+
+**Stop Signal Quality Test**:
+```json
+{
+  "signal_test_enabled": false
+}
+```
+
+**Response** (200 OK): Same as GET response
+
 #### GET /rest/brokerSettings
 
 Get MQTT topic configuration for light.
@@ -638,6 +760,56 @@ Real-time serial data streaming.
 3. Server sends current state
 4. Client can send updates (bidirectional)
 5. Server broadcasts changes to all clients
+
+#### /ws/diagnostics
+
+Real-time UART diagnostic test updates.
+
+**Security**: IS_AUTHENTICATED
+
+**Payload Format**:
+```json
+{
+  "loopback": {
+    "enabled": true,
+    "status": "pass",
+    "tx_count": 142,
+    "rx_count": 142,
+    "error_count": 0,
+    "success_rate": 100.0,
+    "last_test": "TEST:142",
+    "last_received": "TEST:142",
+    "uptime_seconds": 14
+  },
+  "baud_scan": {
+    "enabled": false,
+    "status": "found",
+    "detected_baud": 9600,
+    "current_index": 3,
+    "current_baud": 9600,
+    "test_packets": 5
+  },
+  "signal_quality": {
+    "enabled": false,
+    "status": "complete",
+    "quality_percent": 98,
+    "total_packets": 1000,
+    "sent_packets": 1000,
+    "received_packets": 980,
+    "avg_latency_ms": 0.52,
+    "jitter_ms": 0.08,
+    "error_count": 20,
+    "progress": 100.0
+  }
+}
+```
+
+**Behavior**: Bidirectional - client can start/stop tests, server broadcasts real-time test updates.
+
+**Usage**:
+- **Client → Server**: Send `{"loopback_enabled": true}` to start loopback test
+- **Server → Client**: Automatic updates every time test state changes (new packet sent/received)
+- **Frequency**: Updates pushed on every test event (100ms for loopback, varies for other tests)
 
 ## MQTT Topics
 

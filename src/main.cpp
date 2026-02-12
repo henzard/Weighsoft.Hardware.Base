@@ -1,6 +1,7 @@
 #include <ESP8266React.h>
 #include <examples/led/LedExampleService.h>
 #include <examples/serial/SerialService.h>
+#include <examples/diagnostics/DiagnosticsService.h>
 
 #define SERIAL_BAUD_RATE 115200
 
@@ -9,6 +10,7 @@ AsyncWebServer* server;
 ESP8266React* esp8266React;
 LedExampleService* ledExampleService;
 SerialService* serialService;
+DiagnosticsService* diagnosticsService;
 
 void setup() {
   // start serial and filesystem
@@ -23,19 +25,19 @@ void setup() {
   Serial.print(F("Free heap: "));
   Serial.println(ESP.getFreeHeap());
   
-  Serial.println(F("[1/7] Creating web server..."));
+  Serial.println(F("[1/8] Creating web server..."));
   server = new AsyncWebServer(80);
-  Serial.println(F("[1/7] Web server created OK"));
+  Serial.println(F("[1/8] Web server created OK"));
   
-  Serial.println(F("[2/7] Initializing framework..."));
+  Serial.println(F("[2/8] Initializing framework..."));
   esp8266React = new ESP8266React(server);
-  Serial.println(F("[2/7] Framework created OK"));
+  Serial.println(F("[2/8] Framework created OK"));
   
-  Serial.println(F("[3/7] Starting framework services..."));
+  Serial.println(F("[3/8] Starting framework services..."));
   esp8266React->begin();
-  Serial.println(F("[3/7] Framework initialized OK"));
+  Serial.println(F("[3/8] Framework initialized OK"));
 
-  Serial.println(F("[4/7] Initializing LED example service..."));
+  Serial.println(F("[4/8] Initializing LED example service..."));
   ledExampleService = new LedExampleService(
       server,
       esp8266React->getSecurityManager(),
@@ -44,13 +46,13 @@ void setup() {
       ,nullptr  // BLE server will be configured via callback
 #endif
       );
-  Serial.println(F("[4/7] LED example service created OK"));
+  Serial.println(F("[4/8] LED example service created OK"));
 
   // load the initial LED settings
   ledExampleService->begin();
-  Serial.println(F("[4/7] LED example loaded OK"));
+  Serial.println(F("[4/8] LED example loaded OK"));
 
-  Serial.println(F("[5/7] Initializing Serial monitor service..."));
+  Serial.println(F("[5/8] Initializing Serial monitor service..."));
   serialService = new SerialService(
       server,
       esp8266React->getFS(),
@@ -61,7 +63,15 @@ void setup() {
 #endif
       );
   serialService->begin();
-  Serial.println(F("[5/7] Serial service loaded OK"));
+  Serial.println(F("[5/8] Serial service loaded OK"));
+
+  Serial.println(F("[6/8] Initializing UART Diagnostics service..."));
+  diagnosticsService = new DiagnosticsService(
+      server,
+      esp8266React->getSecurityManager()
+      );
+  diagnosticsService->begin();
+  Serial.println(F("[6/8] Diagnostics service loaded OK"));
 
 #if FT_ENABLED(FT_BLE)
   // Register callbacks after both services exist so callback never sees null
@@ -79,13 +89,13 @@ void setup() {
       }
     }
   );
-  Serial.println(F("[6/7] BLE callbacks registered OK"));
+  Serial.println(F("[7/8] BLE callbacks registered OK"));
 #endif
 
-  Serial.println(F("[7/7] Starting web server..."));
+  Serial.println(F("[8/8] Starting web server..."));
   // start the server
   server->begin();
-  Serial.println(F("[7/7] Web server started OK"));
+  Serial.println(F("[8/8] Web server started OK"));
   
   Serial.println(F("=== System Ready! ==="));
   Serial.print(F("Free heap after init: "));
@@ -98,4 +108,7 @@ void loop() {
   
   // read serial data
   serialService->loop();
+  
+  // run diagnostic tests
+  diagnosticsService->loop();
 }

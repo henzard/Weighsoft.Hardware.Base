@@ -1,0 +1,335 @@
+#include <examples/diagnostics/DiagnosticsService.h>
+
+#ifdef ESP32
+#include <HardwareSerial.h>
+#endif
+
+// Loopback test sends packet every X ms
+#define LOOPBACK_INTERVAL_MS 100
+// Baud scan: wait X ms per rate for data
+#define BAUD_SCAN_TIMEOUT_MS 500
+// Signal quality: delay between packets
+#define SIGNAL_TEST_INTERVAL_MS 10
+
+DiagnosticsService::DiagnosticsService(AsyncWebServer* server, SecurityManager* securityManager) :
+    _httpEndpoint(DiagnosticsState::read,
+                  DiagnosticsState::update,
+                  this,
+                  server,
+                  DIAGNOSTICS_ENDPOINT_PATH,
+                  securityManager,
+                  AuthenticationPredicates::IS_AUTHENTICATED),
+    _webSocket(DiagnosticsState::read,
+               DiagnosticsState::update,
+               this,
+               server,
+               DIAGNOSTICS_SOCKET_PATH,
+               securityManager,
+               AuthenticationPredicates::IS_AUTHENTICATED)
+{
+  _serialStarted = false;
+  _lastTestTime = 0;
+  _loopbackLastSend = 0;
+  _baudTestStartTime = 0;
+  _signalTestStartTime = 0;
+  _latencyBuffer = nullptr;
+  _latencyBufferSize = 0;
+}
+
+void DiagnosticsService::begin() {
+  Serial.println(F("[Diagnostics] Initializing UART diagnostic service..."));
+  
+  // Initialize state
+  _state.loopbackEnabled = false;
+  _state.loopbackStatus = "idle";
+  _state.loopbackTxCount = 0;
+  _state.loopbackRxCount = 0;
+  _state.loopbackErrorCount = 0;
+  _state.loopbackLastTest = "";
+  _state.loopbackLastReceived = "";
+  _state.loopbackStartTime = 0;
+
+  _state.baudScanEnabled = false;
+  _state.baudScanStatus = "idle";
+  _state.baudDetected = 0;
+  _state.baudCurrentIndex = 0;
+  _state.baudTestPackets = 0;
+
+  _state.signalTestEnabled = false;
+  _state.signalStatus = "idle";
+  _state.signalQuality = 0;
+  _state.signalTotalPackets = 1000;
+  _state.signalSentPackets = 0;
+  _state.signalReceivedPackets = 0;
+  _state.signalAvgLatency = 0.0f;
+  _state.signalJitter = 0.0f;
+  _state.signalErrorCount = 0;
+
+  _rxBuffer = "";
+  Serial.println(F("[Diagnostics] Ready. GPIO16 (RX) / GPIO17 (TX)"));
+}
+
+void DiagnosticsService::loop() {
+  // Run active tests
+  if (_state.loopbackEnabled) {
+    runLoopbackTest();
+  }
+  if (_state.baudScanEnabled) {
+    runBaudScan();
+  }
+  if (_state.signalTestEnabled) {
+    runSignalQualityTest();
+  }
+}
+
+void DiagnosticsService::startSerial(uint32_t baud) {
+  if (_serialStarted) {
+    Serial2.end();
+  }
+  Serial2.begin(baud, SERIAL_8N1, DIAG_RX_PIN, DIAG_TX_PIN);
+  _serialStarted = true;
+  Serial.printf("[Diagnostics] Serial2 started: %lu baud, GPIO16 (RX), GPIO17 (TX)\n", (unsigned long)baud);
+}
+
+void DiagnosticsService::stopSerial() {
+  if (_serialStarted) {
+    Serial2.end();
+    _serialStarted = false;
+    Serial.println(F("[Diagnostics] Serial2 stopped"));
+  }
+}
+
+String DiagnosticsService::readSerialLine() {
+  while (Serial2.available()) {
+    char c = Serial2.read();
+    if (c == '\n' || c == '\r') {
+      if (_rxBuffer.length() > 0) {
+        String line = _rxBuffer;
+        _rxBuffer = "";
+        return line;
+      }
+    } else {
+      _rxBuffer += c;
+      if (_rxBuffer.length() > 256) {
+        _rxBuffer = "";  // Overflow protection
+      }
+    }
+  }
+  return "";
+}
+
+void DiagnosticsService::runLoopbackTest() {
+  // Start serial if not started
+  if (!_serialStarted) {
+    startSerial(115200);
+    _loopbackLastSend = millis();
+  }
+
+  // Send test packet every LOOPBACK_INTERVAL_MS
+  if (millis() - _loopbackLastSend >= LOOPBACK_INTERVAL_MS) {
+    _state.loopbackTxCount++;
+    String testMsg = "TEST:" + String(_state.loopbackTxCount, 10);
+    Serial2.println(testMsg);
+    _state.loopbackLastTest = testMsg;
+    _loopbackLastSend = millis();
+    
+    // Broadcast updated state
+    update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
+  }
+
+  // Read any incoming data
+  String line = readSerialLine();
+  if (line.length() > 0) {
+    _state.loopbackRxCount++;
+    _state.loopbackLastReceived = line;
+    
+    // Check if it matches expected
+    if (line != _state.loopbackLastTest) {
+      _state.loopbackErrorCount++;
+    }
+
+    // Update status
+    float successRate = (float)(_state.loopbackRxCount - _state.loopbackErrorCount) / _state.loopbackTxCount * 100.0f;
+    if (successRate >= 95.0f) {
+      _state.loopbackStatus = "pass";
+    } else {
+      _state.loopbackStatus = "fail";
+    }
+
+    // Broadcast updated state
+    update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
+  }
+}
+
+void DiagnosticsService::runBaudScan() {
+  // Initialize scan if just started
+  if (_baudTestStartTime == 0) {
+    _baudTestStartTime = millis();
+    _state.baudCurrentIndex = 0;
+    _state.baudTestPackets = 0;
+    _rxBuffer = "";
+    startSerial(DIAG_BAUD_RATES[_state.baudCurrentIndex]);
+    Serial.printf("[Diagnostics] Baud scan: testing %lu baud...\n", 
+                  (unsigned long)DIAG_BAUD_RATES[_state.baudCurrentIndex]);
+    update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
+  }
+
+  // Read any data at current baud rate
+  String line = readSerialLine();
+  if (line.length() > 0) {
+    _state.baudTestPackets++;
+    Serial.printf("[Diagnostics] Baud scan: received data at %lu baud (packet %u)\n",
+                  (unsigned long)DIAG_BAUD_RATES[_state.baudCurrentIndex], _state.baudTestPackets);
+    
+    // If we get 3+ valid packets, assume this is the correct baud
+    if (_state.baudTestPackets >= 3) {
+      _state.baudDetected = DIAG_BAUD_RATES[_state.baudCurrentIndex];
+      _state.baudScanStatus = "found";
+      _state.baudScanEnabled = false;
+      stopSerial();
+      _baudTestStartTime = 0;
+      Serial.printf("[Diagnostics] Baud scan: DETECTED %lu baud!\n", (unsigned long)_state.baudDetected);
+      update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
+      return;
+    }
+  }
+
+  // Timeout for current baud rate
+  if (millis() - _baudTestStartTime >= BAUD_SCAN_TIMEOUT_MS) {
+    Serial.printf("[Diagnostics] Baud scan: no data at %lu baud\n", 
+                  (unsigned long)DIAG_BAUD_RATES[_state.baudCurrentIndex]);
+    
+    // Move to next baud rate
+    _state.baudCurrentIndex++;
+    _state.baudTestPackets = 0;
+    
+    if (_state.baudCurrentIndex >= DIAG_BAUD_RATES_COUNT) {
+      // Scan complete - not found
+      _state.baudScanStatus = "not_found";
+      _state.baudScanEnabled = false;
+      stopSerial();
+      _baudTestStartTime = 0;
+      Serial.println(F("[Diagnostics] Baud scan: NOT FOUND (no data at any rate)"));
+      update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
+    } else {
+      // Try next rate
+      _baudTestStartTime = millis();
+      _rxBuffer = "";
+      startSerial(DIAG_BAUD_RATES[_state.baudCurrentIndex]);
+      Serial.printf("[Diagnostics] Baud scan: testing %lu baud...\n", 
+                    (unsigned long)DIAG_BAUD_RATES[_state.baudCurrentIndex]);
+      update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
+    }
+  }
+}
+
+void DiagnosticsService::runSignalQualityTest() {
+  // Initialize test if just started
+  if (_signalTestStartTime == 0) {
+    _signalTestStartTime = millis();
+    _state.signalSentPackets = 0;
+    _state.signalReceivedPackets = 0;
+    _state.signalErrorCount = 0;
+    _rxBuffer = "";
+    
+    // Allocate latency buffer for jitter calculation
+    _latencyBufferSize = min(_state.signalTotalPackets, (uint32_t)1000);
+    _latencyBuffer = new float[_latencyBufferSize];
+    
+    startSerial(115200);
+    Serial.printf("[Diagnostics] Signal quality test: %u packets\n", _state.signalTotalPackets);
+    update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
+  }
+
+  // Send next packet
+  if (_state.signalSentPackets < _state.signalTotalPackets && 
+      millis() - _lastTestTime >= SIGNAL_TEST_INTERVAL_MS) {
+    unsigned long sendTime = micros();
+    String testMsg = "SIG:" + String(_state.signalSentPackets, 10) + ":" + String(sendTime);
+    Serial2.println(testMsg);
+    _state.signalSentPackets++;
+    _lastTestTime = millis();
+    
+    // Broadcast progress every 100 packets
+    if (_state.signalSentPackets % 100 == 0) {
+      update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
+    }
+  }
+
+  // Read incoming data
+  String line = readSerialLine();
+  if (line.length() > 0) {
+    unsigned long receiveTime = micros();
+    _state.signalReceivedPackets++;
+    
+    // Parse: "SIG:123:1234567890"
+    int colon1 = line.indexOf(':');
+    int colon2 = line.indexOf(':', colon1 + 1);
+    if (colon1 > 0 && colon2 > colon1) {
+      String seqStr = line.substring(colon1 + 1, colon2);
+      String timeStr = line.substring(colon2 + 1);
+      unsigned long sendTime = timeStr.toInt();
+      unsigned long latency = receiveTime - sendTime;
+      float latencyMs = latency / 1000.0f;
+      
+      // Store latency for jitter calculation
+      uint32_t idx = _state.signalReceivedPackets - 1;
+      if (idx < _latencyBufferSize) {
+        _latencyBuffer[idx] = latencyMs;
+      }
+    } else {
+      _state.signalErrorCount++;
+    }
+  }
+
+  // Check if test complete
+  if (_state.signalSentPackets >= _state.signalTotalPackets && 
+      (millis() - _lastTestTime >= 1000 || _state.signalReceivedPackets >= _state.signalTotalPackets)) {
+    // Calculate final metrics
+    calculateSignalQuality();
+    
+    _state.signalStatus = "complete";
+    _state.signalTestEnabled = false;
+    stopSerial();
+    _signalTestStartTime = 0;
+    
+    // Clean up
+    if (_latencyBuffer) {
+      delete[] _latencyBuffer;
+      _latencyBuffer = nullptr;
+    }
+    
+    Serial.printf("[Diagnostics] Signal quality test complete: %u%% quality\n", _state.signalQuality);
+    update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
+  }
+}
+
+void DiagnosticsService::calculateSignalQuality() {
+  uint32_t received = _state.signalReceivedPackets;
+  uint32_t sent = _state.signalSentPackets;
+  
+  if (sent == 0) {
+    _state.signalQuality = 0;
+    return;
+  }
+
+  // Calculate average latency
+  float totalLatency = 0.0f;
+  uint32_t validLatencies = min(received, _latencyBufferSize);
+  for (uint32_t i = 0; i < validLatencies; i++) {
+    totalLatency += _latencyBuffer[i];
+  }
+  _state.signalAvgLatency = validLatencies > 0 ? totalLatency / validLatencies : 0.0f;
+
+  // Calculate jitter (standard deviation of latency)
+  float variance = 0.0f;
+  for (uint32_t i = 0; i < validLatencies; i++) {
+    float diff = _latencyBuffer[i] - _state.signalAvgLatency;
+    variance += diff * diff;
+  }
+  _state.signalJitter = validLatencies > 0 ? sqrt(variance / validLatencies) : 0.0f;
+
+  // Quality = (packets received - errors) / packets sent * 100
+  uint32_t successful = received - _state.signalErrorCount;
+  _state.signalQuality = (uint8_t)((float)successful / sent * 100.0f);
+}
