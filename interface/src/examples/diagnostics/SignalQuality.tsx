@@ -82,8 +82,8 @@ const SignalQuality: FC = () => {
             sx={{ mb: 2 }}
           >
             <MenuItem value={10}>10 packets (~1 second)</MenuItem>
-            <MenuItem value={100}>100 packets (~10 seconds)</MenuItem>
-            <MenuItem value={250}>250 packets (~25 seconds)</MenuItem>
+            <MenuItem value={100}>100 packets (~5 seconds)</MenuItem>
+            <MenuItem value={250}>250 packets (~13 seconds)</MenuItem>
           </TextField>
           <Typography variant="caption" color="text.secondary">
             More packets = longer test = more accurate results

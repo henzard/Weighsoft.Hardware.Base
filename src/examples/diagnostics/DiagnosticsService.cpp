@@ -9,8 +9,8 @@
 #define LOOPBACK_INTERVAL_MS 100
 // Baud scan: wait X ms per rate for data
 #define BAUD_SCAN_TIMEOUT_MS 500
-// Signal quality: delay between packets
-#define SIGNAL_TEST_INTERVAL_MS 10
+// Signal quality: delay between packets (50ms = 20 packets/sec, reduces buffer overflow)
+#define SIGNAL_TEST_INTERVAL_MS 50
 // WebSocket update throttle (prevent queue overflow)
 #define WS_UPDATE_THROTTLE_MS 500
 
