@@ -22,7 +22,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 const SignalQuality: FC = () => {
   const { data, connected } = useWs<DiagnosticsData>(DIAGNOSTICS_WEBSOCKET_URL);
-  const [packetCount, setPacketCount] = useState(1000);
+  const [packetCount, setPacketCount] = useState(100);
 
   const signal = data?.signal_quality;
   const isRunning = signal?.enabled ?? false;
@@ -81,9 +81,9 @@ const SignalQuality: FC = () => {
             disabled={isRunning}
             sx={{ mb: 2 }}
           >
-            <MenuItem value={100}>100 packets (~1 second)</MenuItem>
-            <MenuItem value={1000}>1,000 packets (~10 seconds)</MenuItem>
-            <MenuItem value={10000}>10,000 packets (~100 seconds)</MenuItem>
+            <MenuItem value={10}>10 packets (~1 second)</MenuItem>
+            <MenuItem value={100}>100 packets (~10 seconds)</MenuItem>
+            <MenuItem value={250}>250 packets (~25 seconds)</MenuItem>
           </TextField>
           <Typography variant="caption" color="text.secondary">
             More packets = longer test = more accurate results
