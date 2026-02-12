@@ -315,7 +315,7 @@ void DiagnosticsService::calculateSignalQuality() {
 
   // Calculate average latency
   float totalLatency = 0.0f;
-  uint32_t validLatencies = min(received, _latencyBufferSize);
+  uint32_t validLatencies = received < (uint32_t)_latencyBufferSize ? received : (uint32_t)_latencyBufferSize;
   for (uint32_t i = 0; i < validLatencies; i++) {
     totalLatency += _latencyBuffer[i];
   }
