@@ -2,6 +2,7 @@
 #include <examples/led/LedExampleService.h>
 #include <examples/serial/SerialService.h>
 #include <examples/diagnostics/DiagnosticsService.h>
+#include "version.h"
 
 #define SERIAL_BAUD_RATE 115200
 
@@ -17,13 +18,17 @@ void setup() {
   Serial.begin(SERIAL_BAUD_RATE);
   delay(500);
   
-  Serial.println(F("\n\n=== Weighsoft Hardware UI Starting ==="));
+  Serial.println(F("\n\n=== Weighsoft Hardware Base ==="));
+  Serial.printf("Version: %s\n", VERSION_STRING);
+  Serial.printf("Build: %s %s\n", BUILD_DATE, BUILD_TIME);
+  Serial.printf("API: %s\n", API_VERSION);
   #ifdef ESP32
-  Serial.print(F("ESP-IDF version: "));
+  Serial.print(F("ESP-IDF: "));
   Serial.println(esp_get_idf_version());
   #endif
   Serial.print(F("Free heap: "));
   Serial.println(ESP.getFreeHeap());
+  Serial.println();
   
   Serial.println(F("[1/8] Creating web server..."));
   server = new AsyncWebServer(80);
