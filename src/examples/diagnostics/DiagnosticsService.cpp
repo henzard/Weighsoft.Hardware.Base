@@ -150,9 +150,11 @@ void DiagnosticsService::startSerial(uint32_t baud) {
   if (_serialStarted) {
     Serial2.end();
   }
+  // Increase RX buffer from default 256 to 1024 bytes to handle bursts
+  Serial2.setRxBufferSize(1024);
   Serial2.begin(baud, SERIAL_8N1, DIAG_RX_PIN, DIAG_TX_PIN);
   _serialStarted = true;
-  Serial.printf("[Diagnostics] Serial2 started: %lu baud, GPIO16 (RX), GPIO17 (TX)\n", (unsigned long)baud);
+  Serial.printf("[Diagnostics] Serial2 started: %lu baud, GPIO16 (RX), GPIO17 (TX), RX buffer=1024\n", (unsigned long)baud);
 }
 
 void DiagnosticsService::stopSerial() {
@@ -327,9 +329,11 @@ void DiagnosticsService::runSignalQualityTest() {
     _lastWsBroadcast = millis();
   }
 
-  // Read incoming data
-  String line = readSerialLine();
-  if (line.length() > 0) {
+  // Read ALL available incoming data (not just one line) to prevent buffer overflow
+  while (true) {
+    String line = readSerialLine();
+    if (line.length() == 0) break;  // No more complete lines
+    
     unsigned long receiveTime = micros();
     _state.signalReceivedPackets++;
     
