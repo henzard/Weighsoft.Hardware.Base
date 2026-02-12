@@ -194,7 +194,9 @@ void DiagnosticsService::runLoopbackTest() {
   // Send test packet every LOOPBACK_INTERVAL_MS
   if (millis() - _loopbackLastSend >= LOOPBACK_INTERVAL_MS) {
     _state.loopbackTxCount++;
-    String testMsg = "TEST:" + String(_state.loopbackTxCount, 10);
+    // Use static buffer to avoid String memory fragmentation
+    char testMsg[32];
+    snprintf(testMsg, sizeof(testMsg), "TEST:%lu", (unsigned long)_state.loopbackTxCount);
     Serial2.println(testMsg);
     _state.loopbackLastTest = testMsg;
     _loopbackLastSend = millis();
@@ -300,8 +302,8 @@ void DiagnosticsService::runSignalQualityTest() {
     _state.signalErrorCount = 0;
     _rxBuffer = "";
     
-    // Allocate latency buffer for jitter calculation
-    _latencyBufferSize = min(_state.signalTotalPackets, (uint32_t)1000);
+    // Allocate latency buffer for jitter calculation (limit to 500 to save memory)
+    _latencyBufferSize = min(_state.signalTotalPackets, (uint32_t)500);
     _latencyBuffer = new float[_latencyBufferSize];
     
     startSerial(115200);
@@ -313,8 +315,8 @@ void DiagnosticsService::runSignalQualityTest() {
   if (_state.signalSentPackets < _state.signalTotalPackets && 
       millis() - _lastTestTime >= SIGNAL_TEST_INTERVAL_MS) {
     unsigned long sendTime = micros();
-    String testMsg = "SIG:" + String(_state.signalSentPackets, 10) + ":" + String(sendTime);
-    Serial2.println(testMsg);
+    // Use printf to avoid String concatenation memory fragmentation
+    Serial2.printf("SIG:%lu:%lu\n", (unsigned long)_state.signalSentPackets, sendTime);
     _state.signalSentPackets++;
     _lastTestTime = millis();
   }
