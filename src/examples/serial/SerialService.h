@@ -66,6 +66,7 @@ class SerialService : public StatefulService<SerialState> {
 
   String _lineBuffer;   // Accumulates serial data until newline
   bool _serialStarted;  // True after first begin(), so we can call end() before reconfig
+  bool _suspended;      // True when DiagnosticsService is using Serial2
 
   void configureMqtt();
   void readSerial();       // Called from loop()
@@ -73,6 +74,12 @@ class SerialService : public StatefulService<SerialState> {
   String extractWeight(const String& line);  // Extracts first capture group from regex pattern
   uint32_t getSerialConfig();  // Converts databits/parity/stopbits to ESP32 config constant
   void onConfigUpdated();  // Called when config changes (e.g. from REST POST)
+
+ public:
+  // Coordination with DiagnosticsService
+  void suspendSerial();    // Stop Serial2, allow DiagnosticsService to use it
+  void resumeSerial();     // Restart Serial2 after DiagnosticsService releases it
+  bool isSuspended() const { return _suspended; }
 };
 
 #endif

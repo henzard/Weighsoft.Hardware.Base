@@ -5,6 +5,26 @@ All notable changes to Weighsoft Hardware Base will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **UART Mode Management**: Persistent mode switcher (Live Monitoring vs Diagnostics)
+  - `UartModeService` for backend state management with flash persistence (`/config/uartMode.json`)
+  - `UartModeSwitcher` React component for UI mode control
+  - REST API (`/rest/uartMode`) and WebSocket (`/ws/uartMode`) endpoints
+  - Automatic mode application on boot based on persisted setting
+  - Mode switcher integrated into Serial and Diagnostics info pages
+- **Hardware Coordination**: Enhanced mutual exclusion for Serial2 access
+  - `stopAllTests()` method in DiagnosticsService for clean test termination
+  - Automatic cleanup of diagnostic tests when switching to Live mode
+  - SerialService properly resumes after diagnostics mode ends
+
+### Changed
+- Updated boot sequence to include UartModeService initialization ([x/10] now)
+- Main.cpp now links UartModeService with Serial and Diagnostics services for coordination
+- API documentation updated with UART Mode Management endpoints
+- Frontend components refactored to support mode-aware rendering
+
 ## [0.2.0] - 2024-02-12
 
 ### Added

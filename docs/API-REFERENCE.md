@@ -761,6 +761,21 @@ Real-time serial data streaming.
 4. Client can send updates (bidirectional)
 5. Server broadcasts changes to all clients
 
+#### /ws/uartMode
+
+Real-time UART mode change notifications.
+
+**Security**: IS_AUTHENTICATED
+
+**Message Format**:
+```json
+{
+  "mode": "live"
+}
+```
+
+**Direction**: Server → Client (broadcast on mode change)
+
 #### /ws/diagnostics
 
 Real-time UART diagnostic test updates.

@@ -8,4 +8,5 @@ export { default as ButtonRow } from './ButtonRow';
 export { default as MessageBox } from './MessageBox';
 export { default as ThemeToggle } from './ThemeToggle';
 export { default as VersionDisplay } from './VersionDisplay';
+export { default as UartModeSwitcher } from './UartModeSwitcher';
 

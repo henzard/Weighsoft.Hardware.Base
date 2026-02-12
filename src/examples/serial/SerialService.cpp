@@ -45,6 +45,7 @@ SerialService::SerialService(AsyncWebServer* server,
   _mqttUniqueId = SettingValue::format("serial-#{unique_id}");
   _mqttClient->onConnect(std::bind(&SerialService::configureMqtt, this));
   _serialStarted = false;
+  _suspended = false;  // Not suspended initially
 
   addUpdateHandler([this](const String& originId) {
     // Skip "serial_hw" (data from scale) and "init" (begin() will call applySerialConfig() itself)
@@ -75,6 +76,11 @@ void SerialService::begin() {
 }
 
 void SerialService::loop() {
+  // Skip reading if suspended (DiagnosticsService is using Serial2)
+  if (_suspended) {
+    return;
+  }
+
   // Raw byte diagnostic: log every single byte that arrives on Serial2
   static unsigned long totalBytes = 0;
   while (Serial2.available()) {
@@ -238,3 +244,22 @@ void SerialService::configureBle() {
                 BLE_SERVICE_UUID, BLE_CHAR_UUID);
 }
 #endif
+
+// === Coordination with DiagnosticsService ===
+
+void SerialService::suspendSerial() {
+  if (_serialStarted && !_suspended) {
+    Serial.println(F("[Serial] Suspending - DiagnosticsService taking control of Serial2"));
+    Serial2.end();
+    _serialStarted = false;
+    _suspended = true;
+  }
+}
+
+void SerialService::resumeSerial() {
+  if (_suspended) {
+    Serial.println(F("[Serial] Resuming - restarting Serial2"));
+    _suspended = false;
+    applySerialConfig();
+  }
+}

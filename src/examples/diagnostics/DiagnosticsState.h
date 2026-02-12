@@ -101,8 +101,12 @@ class DiagnosticsState {
           state.loopbackLastReceived = "";
           state.loopbackStartTime = millis();
         } else {
-          // Stopping test
-          state.loopbackStatus = "idle";
+          // Stopping test - mark result as "stopped" instead of "idle"
+          if (state.loopbackTxCount > 0) {
+            // Keep status as pass/fail based on results
+          } else {
+            state.loopbackStatus = "idle";
+          }
         }
         result = StateUpdateResult::CHANGED;
       }
