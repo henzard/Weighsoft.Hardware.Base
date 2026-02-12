@@ -118,13 +118,13 @@ void SerialService::loop() {
     }
   }
 
-  // Heartbeat every 5 seconds (shortened for debugging)
-  static unsigned long lastDiag = 0;
-  if (millis() - lastDiag >= 5000) {
-    lastDiag = millis();
-    Serial.printf("[Serial] Heartbeat: started=%d, totalRX=%lu, buffer=%d chars, baud=%lu\n",
-                  _serialStarted, totalBytes, _lineBuffer.length(), (unsigned long)_state.baudrate);
-  }
+  // Heartbeat disabled - remove if debugging needed
+  // static unsigned long lastDiag = 0;
+  // if (millis() - lastDiag >= 5000) {
+  //   lastDiag = millis();
+  //   Serial.printf("[Serial] Heartbeat: started=%d, totalRX=%lu, buffer=%d chars, baud=%lu\n",
+  //                 _serialStarted, totalBytes, _lineBuffer.length(), (unsigned long)_state.baudrate);
+  // }
 }
 
 void SerialService::onConfigUpdated() {
