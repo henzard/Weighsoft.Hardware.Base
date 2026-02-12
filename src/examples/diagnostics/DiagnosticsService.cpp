@@ -11,6 +11,8 @@
 #define BAUD_SCAN_TIMEOUT_MS 500
 // Signal quality: delay between packets
 #define SIGNAL_TEST_INTERVAL_MS 10
+// WebSocket update throttle (prevent queue overflow)
+#define WS_UPDATE_THROTTLE_MS 500
 
 DiagnosticsService::DiagnosticsService(AsyncWebServer* server, SecurityManager* securityManager) :
     _httpEndpoint(DiagnosticsState::read,
@@ -36,6 +38,7 @@ DiagnosticsService::DiagnosticsService(AsyncWebServer* server, SecurityManager* 
   _signalTestStartTime = 0;
   _latencyBuffer = nullptr;
   _latencyBufferSize = 0;
+  _lastWsBroadcast = 0;
 }
 
 void DiagnosticsService::begin() {
@@ -185,6 +188,7 @@ void DiagnosticsService::runLoopbackTest() {
     requestSerialControl();  // Stop SerialService first
     startSerial(115200);
     _loopbackLastSend = millis();
+    _lastWsBroadcast = millis();
   }
 
   // Send test packet every LOOPBACK_INTERVAL_MS
@@ -194,9 +198,6 @@ void DiagnosticsService::runLoopbackTest() {
     Serial2.println(testMsg);
     _state.loopbackLastTest = testMsg;
     _loopbackLastSend = millis();
-    
-    // Broadcast updated state
-    update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
   }
 
   // Read any incoming data
@@ -217,9 +218,12 @@ void DiagnosticsService::runLoopbackTest() {
     } else {
       _state.loopbackStatus = "fail";
     }
-
-    // Broadcast updated state
+  }
+  
+  // Throttled WebSocket broadcast (only every WS_UPDATE_THROTTLE_MS)
+  if (millis() - _lastWsBroadcast >= WS_UPDATE_THROTTLE_MS) {
     update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
+    _lastWsBroadcast = millis();
   }
 }
 
@@ -227,6 +231,7 @@ void DiagnosticsService::runBaudScan() {
   // Initialize scan if just started
   if (_baudTestStartTime == 0) {
     _baudTestStartTime = millis();
+    _lastWsBroadcast = millis();
     _state.baudCurrentIndex = 0;
     _state.baudTestPackets = 0;
     _rxBuffer = "";
@@ -289,6 +294,7 @@ void DiagnosticsService::runSignalQualityTest() {
   // Initialize test if just started
   if (_signalTestStartTime == 0) {
     _signalTestStartTime = millis();
+    _lastWsBroadcast = millis();
     _state.signalSentPackets = 0;
     _state.signalReceivedPackets = 0;
     _state.signalErrorCount = 0;
@@ -311,11 +317,12 @@ void DiagnosticsService::runSignalQualityTest() {
     Serial2.println(testMsg);
     _state.signalSentPackets++;
     _lastTestTime = millis();
-    
-    // Broadcast progress every 100 packets
-    if (_state.signalSentPackets % 100 == 0) {
-      update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
-    }
+  }
+  
+  // Throttled WebSocket broadcast for progress updates
+  if (millis() - _lastWsBroadcast >= WS_UPDATE_THROTTLE_MS) {
+    update([](DiagnosticsState& state) { return StateUpdateResult::CHANGED; }, "diag_hw");
+    _lastWsBroadcast = millis();
   }
 
   // Read incoming data

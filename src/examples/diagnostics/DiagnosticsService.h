@@ -43,6 +43,7 @@ class DiagnosticsService : public StatefulService<DiagnosticsState> {
   unsigned long _signalTestStartTime;
   float* _latencyBuffer;  // For jitter calculation
   uint16_t _latencyBufferSize;
+  unsigned long _lastWsBroadcast;  // For throttling WebSocket updates
 
   // Test methods
   void runLoopbackTest();
